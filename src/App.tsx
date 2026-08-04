@@ -1,7 +1,7 @@
 function App() {
   return (
     <div className="flex min-h-svh flex-col items-center justify-center bg-neutral-950 px-6 text-neutral-50">
-      <h1 className="text-4xl font-semibold tracking-tight">Cortex</h1>
+      <h1 className="text-4xl font-semibold tracking-tight">Visagio</h1>
       <p className="mt-2 text-sm text-neutral-400">
         Asistente de visagismo para barbería
       </p>

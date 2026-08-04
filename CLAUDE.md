@@ -1,4 +1,4 @@
-# Cortex — Asistente de visagismo para barbería
+# Visagio — Asistente de visagismo para barbería
 
 > Doc de contexto del proyecto, v2. Leer completo antes de escribir código.
 

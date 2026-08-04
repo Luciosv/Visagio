@@ -7,10 +7,10 @@ REM Requiere tener instalado cloudflared (winget install Cloudflare.cloudflared)
 cd /d "%~dp0"
 
 echo.
-echo Arrancando Cortex + tunel publico...
+echo Arrancando Visagio + tunel publico...
 echo.
 
-start "Cortex Dev Server" cmd /k npm run dev
+start "Visagio Dev Server" cmd /k npm run dev
 
 echo Esperando a que el servidor local levante...
 timeout /t 4 /nobreak >nul
@@ -24,5 +24,5 @@ echo.
 cloudflared tunnel --url http://localhost:5173
 
 echo.
-echo Tunel cerrado. Acorda cerrar tambien la ventana "Cortex Dev Server".
+echo Tunel cerrado. Acorda cerrar tambien la ventana "Visagio Dev Server".
 pause
