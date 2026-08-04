@@ -16,4 +16,9 @@ export default defineConfig({
   define: {
     __APP_VERSION__: JSON.stringify(pkg.version),
   },
+  server: {
+    // Permite acceder al dev server via el tunel de dev-tunnel.bat
+    // (URL temporal *.trycloudflare.com, cambia en cada corrida).
+    allowedHosts: ['.trycloudflare.com'],
+  },
 })
