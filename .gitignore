@@ -28,3 +28,7 @@ Thumbs.db
 
 # Cloudflare
 .wrangler/
+
+# WASM del runtime de MediaPipe: se copia desde node_modules vía postinstall
+# (scripts/copy-mediapipe-wasm.mjs), no hace falta versionarlo.
+public/models/wasm/
