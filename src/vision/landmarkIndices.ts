@@ -43,11 +43,33 @@ export const LANDMARK_IRIS_CENTER_RIGHT = 473
 
 /**
  * Borde superior de la malla en la frente. Pendiente: NO es el nacimiento
- * real del pelo (el triquion). MediaPipe no lo modela. Se deja documentado
- * acá para no perderlo de vista, pero el ajuste real es manual y es Fase 2
- * (sección 7.4 de CLAUDE.md) — no se usa en esta fase.
+ * real del pelo (el triquion). MediaPipe no lo modela. Se usa como posición
+ * INICIAL del handle arrastrable de la Fase 2 (sección 7.4 de CLAUDE.md); el
+ * barbero lo corrige a mano y el valor real usado para medir es el corregido.
  */
 export const LANDMARK_HAIRLINE_APPROX = 10
+
+/**
+ * Punto alto/arco de cada ceja. OJO: este índice NO está en la lista de
+ * partida de la sección 7.5 de CLAUDE.md — esa sección no define un punto de
+ * cejas. Es una SUPOSICIÓN propia de la Fase 2, necesaria para calcular R5
+ * (altura de frente) y R6 (tercios faciales), tomada de referencias públicas
+ * de la topología de FaceMesh/FaceLandmarker (el punto más alto del arco de
+ * cada ceja). VALIDAR VISUALMENTE contra el overlay de debug con caras reales
+ * antes de confiar en R5/R6: si cae en la pestaña o muy arriba de la ceja,
+ * hay que corregir este índice.
+ */
+export const LANDMARK_EYEBROW_LEFT = 105
+export const LANDMARK_EYEBROW_RIGHT = 334
+
+/**
+ * Base de la nariz (subnasal: debajo del tabique, arriba del labio superior).
+ * Tampoco está en la sección 7.5 — es otra SUPOSICIÓN de la Fase 2, necesaria
+ * para R6 (tercios faciales: frente/nariz/mentón). Tomado de referencias
+ * públicas de la topología de FaceMesh como el punto habitual de "base de
+ * nariz". VALIDAR VISUALMENTE antes de confiar en R6.
+ */
+export const LANDMARK_NOSE_BASE = 2
 
 /**
  * Puntos clave a resaltar en el overlay de debug, agrupados para pintarlos
@@ -88,5 +110,15 @@ export const DEBUG_HIGHLIGHT_GROUPS: ReadonlyArray<{
     label: 'Nacimiento de pelo (aprox., pendiente ajuste manual)',
     color: '#4ade80',
     indices: [LANDMARK_HAIRLINE_APPROX],
+  },
+  {
+    label: 'Cejas (supuesto Fase 2, validar)',
+    color: '#c084fc',
+    indices: [LANDMARK_EYEBROW_LEFT, LANDMARK_EYEBROW_RIGHT],
+  },
+  {
+    label: 'Base de nariz (supuesto Fase 2, validar)',
+    color: '#f472b6',
+    indices: [LANDMARK_NOSE_BASE],
   },
 ]

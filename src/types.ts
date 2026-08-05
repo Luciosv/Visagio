@@ -82,3 +82,37 @@ export interface QualityAccepted {
 }
 
 export type QualityResult = QualityRejection | QualityAccepted
+
+/**
+ * Punto 2D normalizado [0,1] respecto del ancho/alto de la imagen procesada.
+ * A diferencia de `LandmarkPoint`, no tiene `z` ni viene necesariamente de un
+ * índice del face mesh: es la posición del handle de línea de nacimiento
+ * (7.4 de CLAUDE.md), que el barbero puede arrastrar a cualquier posición.
+ */
+export interface Point2D {
+  readonly x: number
+  readonly y: number
+}
+
+/**
+ * Proporción de cada tercio facial clásico respecto del largo total
+ * (nacimiento → mentón). Suman ~1 entre los tres. Ver R6 en la sección 7.5.
+ */
+export interface FacialThirds {
+  readonly frente: number
+  readonly nariz: number
+  readonly menton: number
+}
+
+/**
+ * Razones adimensionales R1-R6 de la sección 7.5 de CLAUDE.md. `r4` es el
+ * único que no es una razón sino un ángulo, en grados.
+ */
+export interface FaceRatios {
+  readonly r1: number
+  readonly r2: number
+  readonly r3: number
+  readonly r4: number
+  readonly r5: number
+  readonly r6: FacialThirds
+}
