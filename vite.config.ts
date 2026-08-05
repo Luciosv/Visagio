@@ -21,4 +21,9 @@ export default defineConfig({
     // (URL temporal *.trycloudflare.com, cambia en cada corrida).
     allowedHosts: ['.trycloudflare.com'],
   },
+  preview: {
+    // Mismo motivo que server.allowedHosts, pero para `vite preview`
+    // (preview-tunnel.bat), que valida el Host header por separado.
+    allowedHosts: ['.trycloudflare.com'],
+  },
 })
