@@ -237,6 +237,21 @@ Drive, y **avisarle explícitamente que respalde**, dada la limitación de stora
 en Safari de 2.1. Si la app se prueba bien, en v2 esto va a backend con auth y
 deja de ser un problema.
 
+**Acceso y control de los datos guardados.** Todo lo que la app junta sin que el
+barbero lo pida explícitamente (fichas de cliente, cola de feedback de 2.3) tiene
+que quedar accesible desde un lugar, no invisible dentro del teléfono. La entrada
+es un link chico y discreto (no un botón grande en el flujo principal — pensarlo
+al lado del número de versión, en el pie de la pantalla de inicio, ver sección
+10) a una pantalla de **"Datos y privacidad"** que muestra cuántas fichas y
+cuántos eventos de feedback hay guardados, y dos acciones: **exportar todo** a un
+archivo (ya descripto en 2.3 y en esta sección) y **borrar todo** el
+almacenamiento local, con confirmación. Esto es lo que le permite al barbero, en
+cualquier momento y sin depender de acordarse de un flujo escondido, mandarle el
+archivo al desarrollador o borrar todo si en algún momento no quiere tener esos
+datos en su teléfono. No reemplaza el hábito de respaldo semanal de la sección 6,
+es la puerta de entrada para hacerlo. Se implementa recién cuando exista algo que
+mostrar: Fase 6 (ficha de cliente) y Fase 7 (cola de feedback), ver sección 16.
+
 ---
 
 ## 6. Actualizar la app sin fricción
@@ -422,9 +437,11 @@ conversación que evita la decepción frente al espejo, y ningún competidor la 
 INICIO
  ├─ [Buscar cliente]  ← ruta principal, 90% del uso
  │    └─ Ficha → historial → "repetir el último" / "ajustar" → Resultados
- └─ [Cliente nuevo]
-      └─ Foto → gate de calidad → ajuste de nacimiento
-         → forma + override → form de 4 taps → RESULTADOS
+ ├─ [Cliente nuevo]
+ │    └─ Foto → gate de calidad → ajuste de nacimiento
+ │       → forma + override → form de 4 taps → RESULTADOS
+ └─ (pie, chico, al lado de la versión) "Datos y privacidad"
+      → cuánto hay guardado, exportar todo, borrar todo (ver sección 5)
 
 RESULTADOS
  ├─ toggle corto / medio / largo
@@ -455,6 +472,8 @@ Reglas de UI, en serio:
 7. Ficha de cliente con historial local + export de respaldo
 8. Registro local de feedback (cola con formato definitivo) + botón de exportar
 9. Versión visible y migraciones de IndexedDB
+10. Pantalla discreta "Datos y privacidad": ver cuánto hay guardado, exportar
+    todo, borrar todo (sección 5)
 
 **Explícitamente después del MVP (v1.1), no antes:**
 - Sincronización de la cola de feedback contra el backend
@@ -561,12 +580,17 @@ Web Share. **Probar el compartir en los dos teléfonos antes de seguir**: es la
 feature con más riesgo de comportarse distinto entre plataformas.
 
 **Fase 6 — Ficha de cliente.** IndexedDB **con esquema versionado y migración
-desde el arranque**, búsqueda, historial, export de respaldo.
+desde el arranque**, búsqueda, historial, export de respaldo. Acá se arma la
+pantalla "Datos y privacidad" de la sección 5, con lo que ya hay para mostrar de
+la ficha (exportar / borrar todo).
 
 **Fase 7 — Registro de feedback y entrega.** Cola local con el formato definitivo
-de 2.3, botón de exportar, chips de motivo, botón "este hice". Pulido mobile.
-Sesión con el barbero para corregir los 15 cortes y pasarlos a `verificado: true`.
-Enseñarle a agregar la app a la pantalla de inicio y a exportar el respaldo.
+de 2.3, botón de exportar, chips de motivo, botón "este hice". Sumar la cola de
+feedback a la pantalla "Datos y privacidad" de la Fase 6 (mismo exportar / borrar,
+ahora con las dos fuentes). Pulido mobile. Sesión con el barbero para corregir los
+15 cortes y pasarlos a `verificado: true`. Enseñarle a agregar la app a la
+pantalla de inicio, a exportar el respaldo, y dónde está el botón de borrar todo
+por si en algún momento quiere usarlo.
 
 → **Acá se entrega el MVP.**
 
