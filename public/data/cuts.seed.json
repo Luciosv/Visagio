@@ -29,7 +29,8 @@
     "dificultad": 1,
     "tiempoEjecucionMin": 15,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 0
   },
   {
     "id": "crew",
@@ -61,7 +62,8 @@
     "dificultad": 2,
     "tiempoEjecucionMin": 20,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 1
   },
   {
     "id": "taper-bajo",
@@ -93,7 +95,8 @@
     "dificultad": 3,
     "tiempoEjecucionMin": 25,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 4
   },
   {
     "id": "low-fade",
@@ -125,7 +128,8 @@
     "dificultad": 3,
     "tiempoEjecucionMin": 30,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 5
   },
   {
     "id": "mid-fade",
@@ -157,7 +161,8 @@
     "dificultad": 3,
     "tiempoEjecucionMin": 30,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 6
   },
   {
     "id": "high-fade",
@@ -189,7 +194,8 @@
     "dificultad": 4,
     "tiempoEjecucionMin": 35,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 7
   },
   {
     "id": "french-crop",
@@ -221,7 +227,8 @@
     "dificultad": 3,
     "tiempoEjecucionMin": 25,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 3
   },
   {
     "id": "undercut",
@@ -253,7 +260,8 @@
     "dificultad": 3,
     "tiempoEjecucionMin": 30,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 8
   },
   {
     "id": "side-part",
@@ -285,7 +293,8 @@
     "dificultad": 3,
     "tiempoEjecucionMin": 30,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 6
   },
   {
     "id": "pompadour",
@@ -317,7 +326,8 @@
     "dificultad": 4,
     "tiempoEjecucionMin": 35,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 10
   },
   {
     "id": "capas-medias",
@@ -349,7 +359,8 @@
     "dificultad": 3,
     "tiempoEjecucionMin": 35,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 8
   },
   {
     "id": "mullet",
@@ -381,7 +392,8 @@
     "dificultad": 4,
     "tiempoEjecucionMin": 35,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 8
   },
   {
     "id": "rulos-en-capas",
@@ -413,7 +425,8 @@
     "dificultad": 4,
     "tiempoEjecucionMin": 40,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 10
   },
   {
     "id": "largo-en-capas",
@@ -445,7 +458,8 @@
     "dificultad": 3,
     "tiempoEjecucionMin": 40,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 15
   },
   {
     "id": "top-knot",
@@ -477,6 +491,7 @@
     "dificultad": 3,
     "tiempoEjecucionMin": 30,
     "verificado": false,
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "largoMinimoArribaCm": 15
   }
 ]

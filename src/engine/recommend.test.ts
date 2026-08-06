@@ -24,6 +24,7 @@ function buildCut(overrides: Partial<Cut> & Pick<Cut, 'id'>): Cut {
     tiempoEjecucionMin: 20,
     verificado: false,
     imagenes: { tresCuartos: '/cuts/placeholder-3-4.svg', posterior: '/cuts/placeholder-posterior.svg' },
+    largoMinimoArribaCm: 0,
   }
   return { ...defaults, ...overrides }
 }
@@ -51,6 +52,7 @@ function buildBarberInput(overrides: Partial<BarberInput> = {}): BarberInput {
     densidad: 'medio',
     flags: [],
     minutosDeclarados: 5,
+    largoActualArriba: 'media_melena',
     ...overrides,
   }
 }
@@ -147,6 +149,46 @@ describe('scoreCut', () => {
     const result = scoreCut(cut, classification, barberInput)
     expect(result.breakdown.minutosExceso).toBe(0)
     expect(result.breakdown.penalizacionPeinado).toBe(0)
+  })
+
+  it('marca caminoEnVariosCortes en false cuando el largo actual ya alcanza para el corte', () => {
+    const classification = buildClassification('ovalada', 0.3, 'redonda', 0.2)
+    // "media_melena" llega hasta 12 cm (ver largoActualArribaThresholds.ts).
+    const cut = buildCut({ id: 'alcanzable', largoMinimoArribaCm: 8 })
+    const barberInput = buildBarberInput({ largoActualArriba: 'media_melena' })
+
+    const result = scoreCut(cut, classification, barberInput)
+    expect(result.caminoEnVariosCortes).toBe(false)
+  })
+
+  it('marca caminoEnVariosCortes en true, SIN tocar el score, cuando el corte puntúa alto pero pide más largo del que hay hoy', () => {
+    const classification = buildClassification('alargada', 0.5, 'ovalada', 0.2)
+    const barberInput = buildBarberInput({ largoActualArriba: 'rapado_maquina' })
+    // Afinidad alta a propósito ("puntúa alto"): el punto de la sección 9 es
+    // que un score alto NO alcanza para ocultar que hoy no hay largo.
+    const afinidadForma = { ...buildCut({ id: 'x' }).afinidadForma, alargada: 5 }
+    const cutExigente = buildCut({ id: 'exigente', afinidadForma, largoMinimoArribaCm: 15 })
+    const cutEquivalenteAlcanzable = buildCut({ id: 'equivalente', afinidadForma, largoMinimoArribaCm: 2 })
+
+    const exigenteResult = scoreCut(cutExigente, classification, barberInput)
+    const alcanzableResult = scoreCut(cutEquivalenteAlcanzable, classification, barberInput)
+
+    expect(exigenteResult.caminoEnVariosCortes).toBe(true)
+    // Mismo score que un corte igual de afín pero con largo mínimo bajo: la
+    // falta de largo no resta puntos, solo cambia cómo se muestra en la UI.
+    expect(exigenteResult.score).toBeCloseTo(alcanzableResult.score, 10)
+  })
+
+  it('el corte sigue en el ranking (no se descarta) aunque le falte largo al cliente', () => {
+    const classification = buildClassification('alargada', 0.5, 'ovalada', 0.2)
+    const barberInput = buildBarberInput({ largoActualArriba: 'rapado_maquina' })
+    const afinidadForma = { ...buildCut({ id: 'x' }).afinidadForma, alargada: 5 }
+    const cuts = [buildCut({ id: 'exigente-pero-bueno', afinidadForma, largoMinimoArribaCm: 20 })]
+
+    const ranking = recommendCuts(cuts, classification, barberInput)
+
+    expect(ranking).toHaveLength(1)
+    expect(ranking[0].caminoEnVariosCortes).toBe(true)
   })
 })
 

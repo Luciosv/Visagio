@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { FaceRatios } from '../types'
-import { classifyFaceShape, explainFaceShape } from './faceShape'
+import { applyFaceShapeOverride, classifyFaceShape, explainFaceShape } from './faceShape'
 
 /** Arma un `FaceRatios` completo pisando solo los campos relevantes al test. */
 function buildRatios(overrides: Partial<FaceRatios>): FaceRatios {
@@ -99,6 +99,39 @@ describe('classifyFaceShape', () => {
       expect(Number.isNaN(score.rawScore)).toBe(false)
       expect(Number.isNaN(score.confidence)).toBe(false)
     }
+  })
+})
+
+describe('applyFaceShapeOverride', () => {
+  it('no cambia nada si el barbero confirma el top1 sugerido', () => {
+    const ratios = buildRatios({ r1: 2.0, r2: 0.9, r3: 0.85, r4: 130 })
+    const classification = classifyFaceShape(ratios)
+    const result = applyFaceShapeOverride(classification, classification.top1.shape)
+    expect(result).toBe(classification)
+  })
+
+  it('si corrige al top2 original, el top1 original pasa a ser el nuevo top2', () => {
+    const ratios = buildRatios({ r1: 2.0, r2: 0.9, r3: 0.85, r4: 130 })
+    const classification = classifyFaceShape(ratios)
+    const originalTop1 = classification.top1
+    const result = applyFaceShapeOverride(classification, classification.top2.shape)
+
+    expect(result.top1.shape).toBe(classification.top2.shape)
+    expect(result.top1.confidence).toBe(1)
+    expect(result.top2.shape).toBe(originalTop1.shape)
+  })
+
+  it('si corrige a una forma que no era ni top1 ni top2, el top2 original se mantiene', () => {
+    const ratios = buildRatios({ r1: 2.0, r2: 0.9, r3: 0.85, r4: 130 })
+    const classification = classifyFaceShape(ratios)
+    const originalTop2 = classification.top2
+    const otherShape = classification.scores[classification.scores.length - 1].shape
+
+    const result = applyFaceShapeOverride(classification, otherShape)
+
+    expect(result.top1.shape).toBe(otherShape)
+    expect(result.top1.confidence).toBe(1)
+    expect(result.top2.shape).toBe(originalTop2.shape)
   })
 })
 

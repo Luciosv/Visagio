@@ -112,6 +112,11 @@ describe('cuts.seed.json', () => {
 
       expect(typeof cut.imagenes.tresCuartos).toBe('string')
       expect(typeof cut.imagenes.posterior).toBe('string')
+
+      // Fase 5, sección 9 ("expectativas alcanzables"): mínimo de largo
+      // arriba en centímetros para que el corte sea ejecutable hoy.
+      expect(typeof cut.largoMinimoArribaCm).toBe('number')
+      expect(cut.largoMinimoArribaCm).toBeGreaterThanOrEqual(0)
     }
   })
 

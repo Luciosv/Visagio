@@ -172,6 +172,35 @@ function scoreTriangular(r: FaceRatios): number {
   return average([r1Broad, wideJaw, narrowForehead, relational])
 }
 
+/**
+ * Aplica la corrección manual del barbero (7.6: "un selector para pisar el
+ * resultado... registrar cada corrección") sobre la clasificación completa,
+ * para que el motor de recomendación (Fase 4, `engine/recommend.ts`) siempre
+ * trabaje sobre lo que el barbero CONFIRMÓ, no sobre lo que sugirió el
+ * algoritmo (Fase 5: wiring de form → motor → resultados).
+ *
+ * Si `corrected` ya es el top1 original, no hay nada que tocar. Si no,
+ * `corrected` pasa a ser el nuevo top1 con confianza plena — el barbero está
+ * seguro, no tiene sentido repartirle una confianza fraccionaria como la que
+ * calcula el algoritmo — y el top2 queda así: si `corrected` era el top2
+ * original, el antiguo top1 baja a top2 (se conserva la otra opción real que
+ * el algoritmo había detectado); si `corrected` no era ninguna de las dos
+ * top, el top2 original se mantiene sin cambios.
+ */
+export function applyFaceShapeOverride(
+  classification: FaceShapeClassification,
+  corrected: FaceShape,
+): FaceShapeClassification {
+  const { top1, top2 } = classification
+  if (corrected === top1.shape) return classification
+
+  const newTop1: FaceShapeScore = { shape: corrected, rawScore: 1, confidence: 1 }
+  const newTop2 = corrected === top2.shape ? top1 : top2
+  const rest = classification.scores.filter((s) => s.shape !== newTop1.shape && s.shape !== newTop2.shape)
+
+  return { scores: [newTop1, newTop2, ...rest], top1: newTop1, top2: newTop2 }
+}
+
 // ---------------------------------------------------------------------------
 // Frase explicativa (7.6: "Alargada 61% / Ovalada 34% — cara 1.62× más larga
 // que ancha, mandíbula casi del mismo ancho que los pómulos."). Se cita el

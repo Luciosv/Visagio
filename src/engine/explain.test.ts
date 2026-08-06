@@ -24,6 +24,7 @@ function buildCut(overrides: Partial<Cut> & Pick<Cut, 'id'>): Cut {
     tiempoEjecucionMin: 20,
     verificado: false,
     imagenes: { tresCuartos: '/cuts/placeholder-3-4.svg', posterior: '/cuts/placeholder-posterior.svg' },
+    largoMinimoArribaCm: 0,
   }
   return { ...defaults, ...overrides }
 }
@@ -62,6 +63,7 @@ function buildBarberInput(overrides: Partial<BarberInput> = {}): BarberInput {
     densidad: 'medio',
     flags: [],
     minutosDeclarados: 5,
+    largoActualArriba: 'media_melena',
     ...overrides,
   }
 }

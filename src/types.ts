@@ -216,17 +216,35 @@ export const CLIENT_FLAGS = [
 export type ClientFlag = (typeof CLIENT_FLAGS)[number]
 
 /**
- * Salida completa del form de 4 taps (7.7). `minutosDeclarados` es el cuarto
- * tap ("minutos que está dispuesto a peinarse (0 / 2 / 5+)"): se tipa como
- * `number` en vez de una unión literal porque "5+" no es un valor discreto
- * único, es el piso de un rango abierto; la UI de Fase 5 decide qué chips
- * ofrece (por ejemplo 0 / 2 / 5) pero el motor solo necesita el número.
+ * Largo actual del pelo arriba de la cabeza, en 4 buckets de centímetros.
+ * QUINTO tap del form, agregado en Fase 5 sobre la spec original de 7.7 (esa
+ * sección solo definía 4 taps) — decisión tomada con el usuario en la sesión
+ * de esta fase para poder implementar "expectativas alcanzables" (sección 9:
+ * un corte puede puntuar alto por forma/textura/densidad pero no ser
+ * ejecutable HOY si al cliente todavía no le creció el pelo suficiente).
+ * Se modela como bucket, no como centímetro exacto, porque el barbero no
+ * mide con precisión y no hace falta: alcanza con saber en qué franja
+ * general está. Los rangos en cm de cada bucket viven en
+ * `engine/largoActualArribaThresholds.ts` (mismo patrón que
+ * `qualityThresholds.ts`).
+ */
+export const LARGO_ACTUAL_ARRIBA_VALUES = ['rapado_maquina', 'corto_tijera', 'media_melena', 'largo'] as const
+export type LargoActualArriba = (typeof LARGO_ACTUAL_ARRIBA_VALUES)[number]
+
+/**
+ * Salida completa del form de 5 taps (7.7 + el quinto tap nuevo de arriba).
+ * `minutosDeclarados` es el cuarto tap ("minutos que está dispuesto a
+ * peinarse (0 / 2 / 5+)"): se tipa como `number` en vez de una unión literal
+ * porque "5+" no es un valor discreto único, es el piso de un rango abierto;
+ * la UI de Fase 5 decide qué chips ofrece (por ejemplo 0 / 2 / 5) pero el
+ * motor solo necesita el número.
  */
 export interface BarberInput {
   readonly textura: HairTexture
   readonly densidad: HairDensity
   readonly flags: readonly ClientFlag[]
   readonly minutosDeclarados: number
+  readonly largoActualArriba: LargoActualArriba
 }
 
 /** Longitud general del corte, para el toggle de la sección 9 (se filtra recién en Fase 5). */
@@ -277,6 +295,16 @@ export interface Cut {
   readonly tiempoEjecucionMin: number
   readonly verificado: boolean
   readonly imagenes: CutImages
+  /**
+   * Mínimo de centímetros de largo ARRIBA que necesita este corte para
+   * ejecutarse razonablemente (Fase 5, sección 9: "expectativas
+   * alcanzables"). Se compara contra el bucket de `LargoActualArriba` que
+   * declaró el barbero: si el cliente todavía no llega, el corte no se
+   * descarta del ranking, se marca como `caminoEnVariosCortes` en
+   * `CutRecommendation`. Estimado de arranque por corte, sin verificar (ver
+   * `verificado` arriba y el README de `public/cuts/`).
+   */
+  readonly largoMinimoArribaCm: number
 }
 
 /**
@@ -311,4 +339,12 @@ export interface CutRecommendation {
   readonly cut: Cut
   readonly score: number
   readonly breakdown: CutScoreBreakdown
+  /**
+   * `true` cuando `cut.largoMinimoArribaCm` supera el máximo del bucket de
+   * `largoActualArriba` que declaró el barbero (sección 9: "expectativas
+   * alcanzables"). El corte SIGUE en el ranking con su score normal — esto
+   * no lo descarta, solo le pide a la UI que lo muestre como "camino en 2-3
+   * cortes" en vez de una recomendación directa para hoy.
+   */
+  readonly caminoEnVariosCortes: boolean
 }
