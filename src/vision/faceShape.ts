@@ -194,8 +194,15 @@ export function explainFaceShape(classification: FaceShapeClassification, ratios
   return `${FACE_SHAPE_LABELS[top1.shape]} ${pct1}% / ${FACE_SHAPE_LABELS[top2.shape]} ${pct2}% — ${clause}.`
 }
 
-/** Cláusula corta citando el/los ratio(s) que definen a `shape`, sin mayúscula inicial ni punto final. */
-function describeShapeRatio(shape: FaceShape, r: FaceRatios): string {
+/**
+ * Cláusula corta citando el/los ratio(s) que definen a `shape`, sin
+ * mayúscula inicial ni punto final. Exportada (no solo de uso interno de
+ * `explainFaceShape`) porque `engine/explain.ts` (Fase 4) la reutiliza para
+ * citar el mismo ratio concreto al explicar por qué un CORTE puntuó alto por
+ * la forma de cara — mismo estilo de redacción, una sola fuente de verdad
+ * para "qué ratio explica esta forma".
+ */
+export function describeShapeRatio(shape: FaceShape, r: FaceRatios): string {
   switch (shape) {
     case 'alargada':
       return `cara ${r.r1.toFixed(2)}× más larga que ancha`

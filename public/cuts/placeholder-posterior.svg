@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="300" height="300" role="img" aria-label="Silueta de maniquí, vista posterior (placeholder)">
+  <rect width="300" height="300" fill="#e5e0d8"/>
+  <ellipse cx="150" cy="185" rx="68" ry="88" fill="#f4efe6"/>
+  <path d="M82 150 Q90 58 150 52 Q210 58 218 150 Q218 95 150 90 Q82 95 82 150 Z" fill="#d8d1c4"/>
+  <line x1="150" y1="95" x2="150" y2="230" stroke="#c3bbac" stroke-width="2"/>
+  <ellipse cx="150" cy="255" rx="52" ry="28" fill="#f4efe6"/>
+  <text x="150" y="290" text-anchor="middle" font-family="sans-serif" font-size="12" fill="#8a8375">placeholder — vista posterior</text>
+</svg>

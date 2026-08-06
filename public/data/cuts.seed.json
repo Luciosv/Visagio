@@ -1,0 +1,482 @@
+[
+  {
+    "id": "rapado",
+    "nombre": "Rapado",
+    "longitud": "corto",
+    "afinidadForma": { "ovalada": 4, "redonda": 2, "cuadrada": 4, "alargada": 2, "corazon": 2, "diamante": 3, "triangular": 2 },
+    "afinidadTextura": { "lacio": 4, "ondulado": 4, "rulo": 4, "muy_rizado": 5 },
+    "afinidadDensidad": { "fino": 3, "medio": 4, "grueso": 5 },
+    "favorece": ["entradas", "gorra_o_casco", "trabajo_formal"],
+    "penaliza": ["orejas_prominentes"],
+    "spec": {
+      "costados": "máquina sin guía o #1 en todo el contorno",
+      "arriba": "#1 o #2 parejo en toda la cabeza",
+      "nuca": "a máquina, contorno cuadrado o redondeado según nacimiento",
+      "contorno": "perfilado a navaja en patillas y nuca"
+    },
+    "pasos": [
+      "Peinar en seco para ver dirección de crecimiento y remolinos",
+      "Pasar máquina sin guía o #1 en todo el largo, siempre contra el crecimiento",
+      "Repasar contorno de nuca y patillas con máquina sin guía",
+      "Perfilar borde con navaja o trimmer"
+    ],
+    "cuidados": [
+      "Usar protector solar en el cuero cabelludo si toma sol",
+      "Hidratar el cuero cabelludo si queda muy reseco"
+    ],
+    "mantenimientoSemanas": 2,
+    "minutosDePeinado": 0,
+    "dificultad": 1,
+    "tiempoEjecucionMin": 15,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "crew",
+    "nombre": "Crew cut",
+    "longitud": "corto",
+    "afinidadForma": { "ovalada": 4, "redonda": 3, "cuadrada": 4, "alargada": 3, "corazon": 3, "diamante": 3, "triangular": 3 },
+    "afinidadTextura": { "lacio": 5, "ondulado": 4, "rulo": 3, "muy_rizado": 3 },
+    "afinidadDensidad": { "fino": 4, "medio": 5, "grueso": 4 },
+    "favorece": ["trabajo_formal"],
+    "penaliza": [],
+    "spec": {
+      "costados": "#2 degradado a #3 arriba de la oreja",
+      "arriba": "1-2 cm con tijera sobre peine",
+      "nuca": "a máquina, cuadrada",
+      "contorno": "perfilado a máquina"
+    },
+    "pasos": [
+      "Definir la línea de guía arriba con tijera sobre peine",
+      "Degradar costados de #2 a #3 conectando con la guía",
+      "Texturizar la parte de arriba para que no quede plana",
+      "Perfilar contorno y nuca"
+    ],
+    "cuidados": [
+      "Cera mate en poca cantidad para dar textura",
+      "Recortar cada 2-3 semanas para mantener la forma"
+    ],
+    "mantenimientoSemanas": 3,
+    "minutosDePeinado": 2,
+    "dificultad": 2,
+    "tiempoEjecucionMin": 20,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "taper-bajo",
+    "nombre": "Taper bajo",
+    "longitud": "corto",
+    "afinidadForma": { "ovalada": 5, "redonda": 3, "cuadrada": 4, "alargada": 3, "corazon": 3, "diamante": 3, "triangular": 3 },
+    "afinidadTextura": { "lacio": 5, "ondulado": 4, "rulo": 3, "muy_rizado": 3 },
+    "afinidadDensidad": { "fino": 4, "medio": 5, "grueso": 4 },
+    "favorece": ["trabajo_formal"],
+    "penaliza": [],
+    "spec": {
+      "costados": "degradado de piel a #2 solo en el nacimiento, sube a #3-#4",
+      "arriba": "largo natural, 4-6 cm",
+      "nuca": "degradado bajo, sin marcar línea",
+      "contorno": "difuminado, sin bordes duros"
+    },
+    "pasos": [
+      "Marcar la línea de transición bien abajo, cerca de la oreja",
+      "Degradar con máquina y peines de distintos largos, de piel a #4",
+      "Conectar el degradado con el largo de arriba a tijera",
+      "Difuminar la nuca sin dejar línea marcada"
+    ],
+    "cuidados": [
+      "Retocar el degradado bajo cada 2 semanas para que no 'crezca' hacia arriba",
+      "Peinar con un poco de pomada o crema"
+    ],
+    "mantenimientoSemanas": 2,
+    "minutosDePeinado": 3,
+    "dificultad": 3,
+    "tiempoEjecucionMin": 25,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "low-fade",
+    "nombre": "Low fade",
+    "longitud": "corto",
+    "afinidadForma": { "ovalada": 5, "redonda": 3, "cuadrada": 4, "alargada": 3, "corazon": 4, "diamante": 4, "triangular": 3 },
+    "afinidadTextura": { "lacio": 5, "ondulado": 4, "rulo": 3, "muy_rizado": 3 },
+    "afinidadDensidad": { "fino": 4, "medio": 5, "grueso": 4 },
+    "favorece": ["trabajo_formal"],
+    "penaliza": [],
+    "spec": {
+      "costados": "degradado de piel a #3, arranca bajo (a la altura de la oreja)",
+      "arriba": "5-8 cm, con algo de largo para peinar",
+      "nuca": "degradado bajo conectado con el costado",
+      "contorno": "borde difuminado, sin línea dura"
+    },
+    "pasos": [
+      "Marcar el punto de arranque del fade justo por encima de la oreja",
+      "Degradar con máquina y peines, de piel a #3",
+      "Conectar el fade con el largo de arriba",
+      "Difuminar bordes con máquina sin guía en las orillas"
+    ],
+    "cuidados": [
+      "Retocar cada 2 semanas para mantener el fade bajo",
+      "Usar pomada con brillo si el pelo es lacio, mate si es rulo"
+    ],
+    "mantenimientoSemanas": 2,
+    "minutosDePeinado": 3,
+    "dificultad": 3,
+    "tiempoEjecucionMin": 30,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "mid-fade",
+    "nombre": "Mid fade",
+    "longitud": "corto",
+    "afinidadForma": { "ovalada": 5, "redonda": 4, "cuadrada": 4, "alargada": 3, "corazon": 4, "diamante": 4, "triangular": 4 },
+    "afinidadTextura": { "lacio": 4, "ondulado": 5, "rulo": 4, "muy_rizado": 3 },
+    "afinidadDensidad": { "fino": 3, "medio": 5, "grueso": 5 },
+    "favorece": [],
+    "penaliza": ["orejas_prominentes"],
+    "spec": {
+      "costados": "degradado de piel a #3, arranca a mitad de la cabeza (sien)",
+      "arriba": "6-10 cm",
+      "nuca": "degradado medio, conectado",
+      "contorno": "borde difuminado, remate en la sien"
+    },
+    "pasos": [
+      "Marcar el arranque del fade a la altura de la sien",
+      "Degradar con máquina de piel a #3",
+      "Conectar con el largo de arriba, dejando volumen",
+      "Difuminar bien la transición para que no quede escalón"
+    ],
+    "cuidados": [
+      "Retocar cada 2-3 semanas",
+      "Peinar hacia arriba y atrás con cera o pomada"
+    ],
+    "mantenimientoSemanas": 3,
+    "minutosDePeinado": 4,
+    "dificultad": 3,
+    "tiempoEjecucionMin": 30,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "high-fade",
+    "nombre": "High fade",
+    "longitud": "corto",
+    "afinidadForma": { "ovalada": 4, "redonda": 4, "cuadrada": 4, "alargada": 2, "corazon": 3, "diamante": 3, "triangular": 4 },
+    "afinidadTextura": { "lacio": 3, "ondulado": 5, "rulo": 4, "muy_rizado": 3 },
+    "afinidadDensidad": { "fino": 3, "medio": 5, "grueso": 5 },
+    "favorece": [],
+    "penaliza": ["orejas_prominentes"],
+    "spec": {
+      "costados": "degradado de piel a #3, arranca alto (arriba de la sien)",
+      "arriba": "7-12 cm, con volumen marcado",
+      "nuca": "degradado alto conectado",
+      "contorno": "borde muy marcado, alto contraste"
+    },
+    "pasos": [
+      "Marcar el arranque bien alto, casi en la línea de la coronilla lateral",
+      "Degradar con máquina de piel a #3 en un tramo corto y marcado",
+      "Conectar con el largo de arriba dejando bien de volumen",
+      "Perfilar el contorno con precisión, es el punto más visible del corte"
+    ],
+    "cuidados": [
+      "Retocar cada 2 semanas, el contraste alto crece rápido a la vista",
+      "Usar producto con fijación fuerte para sostener el volumen de arriba"
+    ],
+    "mantenimientoSemanas": 2,
+    "minutosDePeinado": 5,
+    "dificultad": 4,
+    "tiempoEjecucionMin": 35,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "french-crop",
+    "nombre": "French crop",
+    "longitud": "corto",
+    "afinidadForma": { "ovalada": 4, "redonda": 3, "cuadrada": 4, "alargada": 5, "corazon": 5, "diamante": 4, "triangular": 3 },
+    "afinidadTextura": { "lacio": 3, "ondulado": 5, "rulo": 5, "muy_rizado": 3 },
+    "afinidadDensidad": { "fino": 2, "medio": 5, "grueso": 4 },
+    "favorece": ["entradas"],
+    "penaliza": ["remolino_coronilla"],
+    "spec": {
+      "costados": "degradado corto, #2-#3",
+      "arriba": "3-5 cm parejo, flequillo texturizado hacia adelante",
+      "nuca": "corta, degradada",
+      "contorno": "recto en la frente, sin curva"
+    },
+    "pasos": [
+      "Cortar el largo de arriba parejo con tijera, 3-5 cm",
+      "Texturizar las puntas para que el flequillo caiga hacia adelante",
+      "Degradar los costados de piel a #3",
+      "Definir el flequillo recto sobre la frente"
+    ],
+    "cuidados": [
+      "Secar el flequillo hacia adelante con secador",
+      "Cera mate en poca cantidad, sin brillo"
+    ],
+    "mantenimientoSemanas": 3,
+    "minutosDePeinado": 3,
+    "dificultad": 3,
+    "tiempoEjecucionMin": 25,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "undercut",
+    "nombre": "Undercut",
+    "longitud": "medio",
+    "afinidadForma": { "ovalada": 4, "redonda": 4, "cuadrada": 4, "alargada": 3, "corazon": 3, "diamante": 4, "triangular": 5 },
+    "afinidadTextura": { "lacio": 4, "ondulado": 5, "rulo": 4, "muy_rizado": 3 },
+    "afinidadDensidad": { "fino": 3, "medio": 5, "grueso": 5 },
+    "favorece": ["remolino_coronilla"],
+    "penaliza": ["gorra_o_casco"],
+    "spec": {
+      "costados": "rapado a piel o #1, disconectado del largo de arriba",
+      "arriba": "8-12 cm, largo suficiente para peinar hacia atrás o al costado",
+      "nuca": "rapada, disconectada",
+      "contorno": "línea de conexión marcada, sin degradado"
+    },
+    "pasos": [
+      "Rapar los costados y la nuca a piel o #1, sin degradar hacia arriba",
+      "Dejar una línea de corte nítida donde termina el largo de arriba",
+      "Cortar el largo de arriba parejo, 8-12 cm",
+      "Peinar hacia atrás o al costado para marcar el contraste"
+    ],
+    "cuidados": [
+      "Retocar los costados cada 2 semanas para mantener el contraste marcado",
+      "Usar pomada con fijación fuerte para el peinado de arriba"
+    ],
+    "mantenimientoSemanas": 2,
+    "minutosDePeinado": 5,
+    "dificultad": 3,
+    "tiempoEjecucionMin": 30,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "side-part",
+    "nombre": "Side part",
+    "longitud": "medio",
+    "afinidadForma": { "ovalada": 5, "redonda": 3, "cuadrada": 5, "alargada": 3, "corazon": 4, "diamante": 4, "triangular": 3 },
+    "afinidadTextura": { "lacio": 5, "ondulado": 4, "rulo": 2, "muy_rizado": 1 },
+    "afinidadDensidad": { "fino": 4, "medio": 5, "grueso": 3 },
+    "favorece": ["trabajo_formal"],
+    "penaliza": ["remolino_coronilla", "gorra_o_casco"],
+    "spec": {
+      "costados": "degradado corto, #2-#3",
+      "arriba": "6-8 cm con raya lateral marcada",
+      "nuca": "corta, prolija",
+      "contorno": "perfilado sobre la raya"
+    },
+    "pasos": [
+      "Definir la raya lateral en seco antes de cortar",
+      "Degradar los costados de piel a #3",
+      "Cortar el largo de arriba dejando peso para que caiga hacia el costado",
+      "Peinar con la raya marcada y fijar con producto"
+    ],
+    "cuidados": [
+      "Peinar todos los días con peine fino y un poco de pomada con brillo",
+      "Retocar cada 3 semanas"
+    ],
+    "mantenimientoSemanas": 3,
+    "minutosDePeinado": 5,
+    "dificultad": 3,
+    "tiempoEjecucionMin": 30,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "pompadour",
+    "nombre": "Pompadour",
+    "longitud": "medio",
+    "afinidadForma": { "ovalada": 5, "redonda": 4, "cuadrada": 4, "alargada": 2, "corazon": 3, "diamante": 3, "triangular": 5 },
+    "afinidadTextura": { "lacio": 3, "ondulado": 4, "rulo": 4, "muy_rizado": 2 },
+    "afinidadDensidad": { "fino": 2, "medio": 4, "grueso": 5 },
+    "favorece": ["trabajo_formal"],
+    "penaliza": ["entradas", "gorra_o_casco"],
+    "spec": {
+      "costados": "degradado medio a alto, #2-#3",
+      "arriba": "10-14 cm con mucho volumen adelante",
+      "nuca": "degradada, prolija",
+      "contorno": "marcado en las sienes"
+    },
+    "pasos": [
+      "Degradar los costados dejando volumen hacia la coronilla",
+      "Cortar el largo de arriba en capas para dar movimiento",
+      "Marcar el frente con más largo para el copete",
+      "Peinar hacia atrás y arriba con secador y cepillo redondo"
+    ],
+    "cuidados": [
+      "Secar con cepillo todos los días para levantar el copete",
+      "Fijador fuerte, en lo posible con brillo"
+    ],
+    "mantenimientoSemanas": 3,
+    "minutosDePeinado": 8,
+    "dificultad": 4,
+    "tiempoEjecucionMin": 35,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "capas-medias",
+    "nombre": "Capas medias",
+    "longitud": "medio",
+    "afinidadForma": { "ovalada": 4, "redonda": 2, "cuadrada": 3, "alargada": 4, "corazon": 4, "diamante": 4, "triangular": 4 },
+    "afinidadTextura": { "lacio": 3, "ondulado": 5, "rulo": 5, "muy_rizado": 4 },
+    "afinidadDensidad": { "fino": 3, "medio": 5, "grueso": 4 },
+    "favorece": ["orejas_prominentes", "nuca_dificil"],
+    "penaliza": ["trabajo_formal"],
+    "spec": {
+      "costados": "tijera, sin máquina, acompañando el largo de arriba",
+      "arriba": "8-12 cm en capas",
+      "nuca": "tijera, capas cortas",
+      "contorno": "suave, sin líneas duras"
+    },
+    "pasos": [
+      "Cortar el contorno general con tijera sobre peine",
+      "Marcar capas desde la coronilla hacia las puntas para dar movimiento",
+      "Texturizar puntas para aligerar peso",
+      "Perfilar patillas y nuca a tijera"
+    ],
+    "cuidados": [
+      "Usar crema para definir textura sin apelmazar",
+      "Recortar puntas cada 4-5 semanas"
+    ],
+    "mantenimientoSemanas": 5,
+    "minutosDePeinado": 5,
+    "dificultad": 3,
+    "tiempoEjecucionMin": 35,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "mullet",
+    "nombre": "Mullet",
+    "longitud": "largo",
+    "afinidadForma": { "ovalada": 3, "redonda": 2, "cuadrada": 3, "alargada": 4, "corazon": 3, "diamante": 3, "triangular": 3 },
+    "afinidadTextura": { "lacio": 3, "ondulado": 4, "rulo": 4, "muy_rizado": 3 },
+    "afinidadDensidad": { "fino": 2, "medio": 4, "grueso": 5 },
+    "favorece": ["nuca_dificil"],
+    "penaliza": ["trabajo_formal"],
+    "spec": {
+      "costados": "corto, degradado #2-#3 en los laterales y frente",
+      "arriba": "medio, con movimiento",
+      "nuca": "largo, sin cortar, en capas sueltas",
+      "contorno": "marcado en costados, libre en la nuca"
+    },
+    "pasos": [
+      "Degradar costados y frente como un corto convencional",
+      "Dejar la nuca sin tocar o solo pareja en las puntas",
+      "Conectar el largo corto de los costados con el largo de la nuca en capas",
+      "Texturizar la nuca para que tenga movimiento"
+    ],
+    "cuidados": [
+      "Recortar solo las puntas de la nuca para no perder el largo",
+      "Producto con textura para separar mechones"
+    ],
+    "mantenimientoSemanas": 6,
+    "minutosDePeinado": 4,
+    "dificultad": 4,
+    "tiempoEjecucionMin": 35,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "rulos-en-capas",
+    "nombre": "Rulos en capas",
+    "longitud": "largo",
+    "afinidadForma": { "ovalada": 4, "redonda": 2, "cuadrada": 3, "alargada": 5, "corazon": 4, "diamante": 4, "triangular": 3 },
+    "afinidadTextura": { "lacio": 1, "ondulado": 4, "rulo": 5, "muy_rizado": 5 },
+    "afinidadDensidad": { "fino": 3, "medio": 5, "grueso": 4 },
+    "favorece": ["orejas_prominentes", "remolino_coronilla"],
+    "penaliza": ["gorra_o_casco"],
+    "spec": {
+      "costados": "tijera, siguiendo el rulo, sin máquina",
+      "arriba": "10-15 cm en capas largas",
+      "nuca": "tijera, en capas",
+      "contorno": "redondeado, acompañando el rulo natural"
+    },
+    "pasos": [
+      "Cortar en seco o con el rulo activado para ver la caída real",
+      "Marcar capas largas que sigan la espiral del rulo",
+      "Aligerar puntas para que no quede en forma de triángulo",
+      "Definir contorno sin máquina, todo a tijera"
+    ],
+    "cuidados": [
+      "Crema para rulos sin sulfatos, no usar peine en seco",
+      "Recortar puntas cada 6-8 semanas para no perder la forma"
+    ],
+    "mantenimientoSemanas": 7,
+    "minutosDePeinado": 5,
+    "dificultad": 4,
+    "tiempoEjecucionMin": 40,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "largo-en-capas",
+    "nombre": "Largo en capas",
+    "longitud": "largo",
+    "afinidadForma": { "ovalada": 4, "redonda": 4, "cuadrada": 4, "alargada": 2, "corazon": 4, "diamante": 4, "triangular": 3 },
+    "afinidadTextura": { "lacio": 5, "ondulado": 5, "rulo": 3, "muy_rizado": 2 },
+    "afinidadDensidad": { "fino": 4, "medio": 5, "grueso": 4 },
+    "favorece": ["orejas_prominentes", "nuca_dificil"],
+    "penaliza": ["trabajo_formal"],
+    "spec": {
+      "costados": "tijera, largo parejo con el resto",
+      "arriba": "15-20 cm en capas largas",
+      "nuca": "tijera, capas largas",
+      "contorno": "suave, sin máquina"
+    },
+    "pasos": [
+      "Definir el largo base parejo en toda la cabeza",
+      "Marcar capas largas desde la mitad hacia las puntas",
+      "Texturizar puntas para quitar peso",
+      "Perfilar contorno general a tijera, sin máquina"
+    ],
+    "cuidados": [
+      "Recortar puntas cada 6 semanas aunque no se acorte el largo general",
+      "Usar protector de calor si se seca con secador"
+    ],
+    "mantenimientoSemanas": 6,
+    "minutosDePeinado": 6,
+    "dificultad": 3,
+    "tiempoEjecucionMin": 40,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  },
+  {
+    "id": "top-knot",
+    "nombre": "Top knot",
+    "longitud": "largo",
+    "afinidadForma": { "ovalada": 4, "redonda": 4, "cuadrada": 3, "alargada": 2, "corazon": 2, "diamante": 3, "triangular": 4 },
+    "afinidadTextura": { "lacio": 3, "ondulado": 4, "rulo": 5, "muy_rizado": 4 },
+    "afinidadDensidad": { "fino": 2, "medio": 4, "grueso": 5 },
+    "favorece": ["nuca_dificil"],
+    "penaliza": ["entradas"],
+    "spec": {
+      "costados": "degradado corto a medio, #2-#3, o largo parejo según preferencia",
+      "arriba": "largo suficiente para atar, 15 cm o más",
+      "nuca": "acompaña el largo de arriba o degradada si se combina con undercut",
+      "contorno": "prolijo en la línea de nacimiento"
+    },
+    "pasos": [
+      "Definir si los costados van degradados o con el mismo largo (variante undercut+bun)",
+      "Parejar largo de arriba y nuca para que ate bien",
+      "Texturizar puntas sin quitar largo",
+      "Mostrar cómo recoger y atar el rodete"
+    ],
+    "cuidados": [
+      "Atar sin elástico muy ajustado para no quebrar el pelo",
+      "Usar cera o pomada para prolijar los pelos sueltos al atar"
+    ],
+    "mantenimientoSemanas": 6,
+    "minutosDePeinado": 5,
+    "dificultad": 3,
+    "tiempoEjecucionMin": 30,
+    "verificado": false,
+    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" }
+  }
+]

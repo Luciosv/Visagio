@@ -155,3 +155,160 @@ export interface FaceShapeClassification {
   readonly top1: FaceShapeScore
   readonly top2: FaceShapeScore
 }
+
+// ---------------------------------------------------------------------------
+// Fase 4 — motor de recomendación (secciones 8 y 9 de CLAUDE.md).
+//
+// Los tipos de acá abajo (`HairTexture`, `HairDensity`, `ClientFlag`,
+// `BarberInput`) describen la SALIDA del form de 4 taps de la sección 7.7,
+// que todavía no tiene UI (eso es Fase 5): se definen ahora porque
+// `engine/recommend.ts` los necesita como input tipado. Cuando se construya
+// el form real, tiene que producir exactamente esta forma de datos.
+// ---------------------------------------------------------------------------
+
+/** Textura de pelo, primer tap del form (7.7.1). */
+export const HAIR_TEXTURES = ['lacio', 'ondulado', 'rulo', 'muy_rizado'] as const
+export type HairTexture = (typeof HAIR_TEXTURES)[number]
+
+/** Densidad de pelo, segundo tap del form (7.7.2). */
+export const HAIR_DENSITIES = ['fino', 'medio', 'grueso'] as const
+export type HairDensity = (typeof HAIR_DENSITIES)[number]
+
+/**
+ * Flags de implantación y de restricción, taps 3 y 4 del form (7.7.3 y
+ * 7.7.4). Se modelan como un único tipo/array porque `Cut.favorece` y
+ * `Cut.penaliza` (sección 8) hacen match contra cualquiera de los dos por
+ * igual: a un corte le puede favorecer o penalizar tanto un rasgo de
+ * implantación ("remolino_coronilla") como una restricción del cliente
+ * ("orejas_prominentes"), y el motor de la sección 9 no necesita distinguir
+ * el origen para calcular `bonus(favorece ∩ flags)` / `penalización(...)`.
+ * Es el mismo array plano que aparece como `form.flags` en el JSON de
+ * telemetría de la sección 2.3.
+ *
+ * Set elegido como punto de partida (no viene fijado por la spec, que solo
+ * da los cuatro grupos de la 7.7 como ejemplos: "remolinos · nuca ·
+ * entradas · coronilla" para implantación y "orejas prominentes · cuello
+ * corto · gorra o casco · trabajo formal" para restricciones) — revisar con
+ * criterio de barbero antes de calibrar `cuts.seed.json` en Fase 7:
+ *  - `remolino_coronilla`: remolino en la coronilla, condiciona cortes muy
+ *    cortos y texturizados arriba.
+ *  - `entradas`: entradas/retroceso en las sienes.
+ *  - `nuca_dificil`: nacimiento de nuca irregular (partido, muy bajo, etc.).
+ *  - `coronilla_rala`: pelo ralo en la coronilla.
+ *  - `orejas_prominentes`: restricción del cliente, condiciona cortes que
+ *    dejan la oreja muy expuesta.
+ *  - `cuello_corto`: restricción del cliente.
+ *  - `gorra_o_casco`: usa gorra o casco a diario, condiciona cortes que
+ *    dependen de peinado con volumen.
+ *  - `trabajo_formal`: entorno laboral formal, condiciona cortes muy
+ *    alternativos o de largo no convencional.
+ */
+export const CLIENT_FLAGS = [
+  'remolino_coronilla',
+  'entradas',
+  'nuca_dificil',
+  'coronilla_rala',
+  'orejas_prominentes',
+  'cuello_corto',
+  'gorra_o_casco',
+  'trabajo_formal',
+] as const
+export type ClientFlag = (typeof CLIENT_FLAGS)[number]
+
+/**
+ * Salida completa del form de 4 taps (7.7). `minutosDeclarados` es el cuarto
+ * tap ("minutos que está dispuesto a peinarse (0 / 2 / 5+)"): se tipa como
+ * `number` en vez de una unión literal porque "5+" no es un valor discreto
+ * único, es el piso de un rango abierto; la UI de Fase 5 decide qué chips
+ * ofrece (por ejemplo 0 / 2 / 5) pero el motor solo necesita el número.
+ */
+export interface BarberInput {
+  readonly textura: HairTexture
+  readonly densidad: HairDensity
+  readonly flags: readonly ClientFlag[]
+  readonly minutosDeclarados: number
+}
+
+/** Longitud general del corte, para el toggle de la sección 9 (se filtra recién en Fase 5). */
+export const CUT_LENGTHS = ['corto', 'medio', 'largo'] as const
+export type CutLength = (typeof CUT_LENGTHS)[number]
+
+/** Especificación técnica breve de un corte (sección 8), la spec concreta que el barbero le da al cliente. */
+export interface CutSpec {
+  readonly costados: string
+  readonly arriba: string
+  readonly nuca: string
+  readonly contorno: string
+}
+
+/**
+ * Rutas a las dos vistas de maniquí de un corte (sección 15: "mismo ángulo
+ * (3/4 y posterior)"). En esta fase apuntan a placeholders genéricos en
+ * `public/cuts/` (ver README de esa carpeta): las imágenes reales se generan
+ * más adelante, sin que este tipo cambie.
+ */
+export interface CutImages {
+  readonly tresCuartos: string
+  readonly posterior: string
+}
+
+/**
+ * Un corte de la base de `cuts.seed.json` (sección 8). Puntajes de afinidad
+ * en escala 0-5 (0 = no aplica/desaconsejado, 5 = ideal). `verificado: false`
+ * en todo `cuts.seed.json` hasta que el barbero corrija estos datos en Fase 7
+ * (sección 8: "la primera sesión con el barbero es corregirlos uno por uno").
+ */
+export interface Cut {
+  readonly id: string
+  readonly nombre: string
+  readonly longitud: CutLength
+  readonly afinidadForma: Record<FaceShape, number>
+  readonly afinidadTextura: Record<HairTexture, number>
+  readonly afinidadDensidad: Record<HairDensity, number>
+  readonly favorece: readonly ClientFlag[]
+  readonly penaliza: readonly ClientFlag[]
+  readonly spec: CutSpec
+  readonly pasos: readonly string[]
+  readonly cuidados: readonly string[]
+  readonly mantenimientoSemanas: number
+  readonly minutosDePeinado: number
+  /** 1 (más simple) a 5 (más exigente para ejecutar). */
+  readonly dificultad: number
+  readonly tiempoEjecucionMin: number
+  readonly verificado: boolean
+  readonly imagenes: CutImages
+}
+
+/**
+ * Desglose del score de un corte (sección 9), para que `explain.ts` pueda
+ * citar el término concreto que más pesó sin recalcular nada.
+ */
+export interface CutScoreBreakdown {
+  /** w1·afinidadForma[top1]·conf1 */
+  readonly formaTop1: number
+  /** w2·afinidadForma[top2]·conf2 */
+  readonly formaTop2: number
+  /** w3·afinidadTextura[textura] */
+  readonly textura: number
+  /** w4·afinidadDensidad[densidad] */
+  readonly densidad: number
+  /** w5·bonus(favorece ∩ flags) */
+  readonly bonusFavorece: number
+  /** w6·penalización(penaliza ∩ flags), ya en positivo (se resta en el total). */
+  readonly penalizacionPenaliza: number
+  /** w7·max(0, minutosDePeinado - minutosDeclarados), ya en positivo (se resta en el total). */
+  readonly penalizacionPeinado: number
+  /** Flags del cliente que matchearon `cut.favorece`, para citarlos en `explain.ts`. */
+  readonly favoreceCoincidentes: readonly ClientFlag[]
+  /** Flags del cliente que matchearon `cut.penaliza`, para citarlos en `explain.ts`. */
+  readonly penalizaCoincidentes: readonly ClientFlag[]
+  /** Minutos de peinado que exceden lo declarado (0 si no excede). */
+  readonly minutosExceso: number
+}
+
+/** Un corte puntuado por `recommendCuts`, con el desglose para poder explicarlo. */
+export interface CutRecommendation {
+  readonly cut: Cut
+  readonly score: number
+  readonly breakdown: CutScoreBreakdown
+}
