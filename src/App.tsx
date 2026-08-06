@@ -243,9 +243,10 @@ function App() {
           ref={canvasRef}
           className="w-full rounded-xl border border-neutral-800 bg-neutral-900"
         />
-        {stage === 'ajuste-nacimiento' && hairlineCorrected && (
+        {stage === 'ajuste-nacimiento' && hairlineCorrected && hairlineSuggested && (
           <HairlineHandle
             position={hairlineCorrected}
+            lockedX={hairlineSuggested.x}
             canvas={canvasRef.current}
             onChange={handleHairlineDrag}
           />
@@ -268,9 +269,11 @@ function App() {
       {stage === 'ajuste-nacimiento' && (
         <>
           <div className="mt-4 w-full max-w-sm rounded-xl border border-sky-500 bg-sky-950 px-4 py-3 text-sm text-sky-200">
-            Arrastrá el punto verde hasta donde arranca de verdad el pelo. El
-            punto 10 del mesh es solo una aproximación de la frente, no el
-            nacimiento real.
+            Arrastrá en cualquier parte de la foto (arriba o abajo) para mover
+            la línea punteada hasta donde arranca de verdad el pelo. Al tocar,
+            la línea aparece un poco arriba de tu dedo a propósito, para que no
+            la tapes. El punto 10 del mesh es solo una aproximación de la
+            frente, no el nacimiento real.
           </div>
           <button
             type="button"
@@ -393,66 +396,78 @@ function App() {
 interface HairlineHandleProps {
   /** Posición normalizada [0,1] relativa al canvas (no al viewport). */
   readonly position: Point2D
+  /**
+   * X fijo del punto sugerido (landmark 10). El ajuste de nacimiento es
+   * puramente vertical: fijar el x evita que un dedo grande lo arrastre sin
+   * querer hacia el costado y ensucie R1/R5/R6 (reportado con uso real de la
+   * Fase 2).
+   */
+  readonly lockedX: number
   readonly canvas: HTMLCanvasElement | null
   readonly onChange: (point: Point2D) => void
 }
 
 /**
- * Handle arrastrable del nacimiento del pelo (7.4 de CLAUDE.md). Se posiciona
- * con `position: absolute` sobre el canvas usando porcentajes, así que sigue
- * el tamaño renderizado del canvas (que se escala por CSS, `w-full`) sin
- * tener que sincronizar tamaños a mano.
- *
- * DECISIÓN DE INTERACCIÓN a confirmar con uso real: el arrastre es LIBRE en
- * los dos ejes (x e y), no restringido al eje de simetría vertical de la
- * cara. La spec (7.4) deja abierta esa elección ("a lo largo del eje de
- * simetría... o libremente si es más simple de implementar bien"). Se eligió
- * libre por ser más simple y más tolerante a fotos donde la cara no está
- * perfectamente centrada en el punto sugerido; el riesgo es que un barbero
- * con el dedo grande lo arrastre sin querer unos píxeles hacia el costado. Si
- * en el uso real eso genera lecturas raras de R1/R5/R6, la corrección es
- * fácil: proyectar `x` de vuelta al `x` del punto sugerido antes de guardar.
- *
- * Usa Pointer Events con `setPointerCapture` (en vez de listeners en
- * `window`) para que arrastrar con el dedo funcione igual que con mouse y
- * sin perder el gesto si el dedo se sale un poco del handle.
+ * Ese mismo desfasaje es la razón por la que se agrandó la superficie de
+ * arrastre a toda la foto (ver `HairlineHandle` abajo) en vez de un handle
+ * chico: no hace falta acertarle a un punto exacto, alcanza con tocar en
+ * cualquier lado de la imagen y mover el dedo.
  */
-function HairlineHandle({ position, canvas, onChange }: HairlineHandleProps) {
-  function updateFromClientPosition(clientX: number, clientY: number) {
+const HAIRLINE_DRAG_OFFSET_PX = 48
+
+/**
+ * Ajuste del nacimiento del pelo (7.4 de CLAUDE.md), como una línea punteada
+ * horizontal en vez de un punto: es más fácil alinearla a ojo contra el pelo
+ * real que un punto chico, y tapa menos la foto.
+ *
+ * Dos decisiones para el problema de "el dedo tapa lo que estás moviendo":
+ * 1. La superficie de arrastre es TODA la foto (el `div` de abajo cubre el
+ *    canvas entero), no un handle chico — tocás en cualquier lado y arrastrás,
+ *    no hace falta acertarle a un punto.
+ * 2. La línea se dibuja `HAIRLINE_DRAG_OFFSET_PX` más arriba de donde está el
+ *    dedo realmente. Se mueve 1 a 1 con el dedo (mismo patrón que el cursor de
+ *    texto de iOS al mantener presionado), así que se sigue sintiendo
+ *    conectada al gesto, pero nunca queda tapada por el dedo.
+ *
+ * Usa Pointer Events con `setPointerCapture` para que el arrastre con el dedo
+ * no se corte si se sale un poco del elemento.
+ */
+function HairlineHandle({ position, lockedX, canvas, onChange }: HairlineHandleProps) {
+  function updateFromClientY(clientY: number) {
     if (!canvas) return
     const rect = canvas.getBoundingClientRect()
-    if (rect.width === 0 || rect.height === 0) return
-    const x = clamp01((clientX - rect.left) / rect.width)
-    const y = clamp01((clientY - rect.top) / rect.height)
-    onChange({ x, y })
+    if (rect.height === 0) return
+    const y = clamp01((clientY - HAIRLINE_DRAG_OFFSET_PX - rect.top) / rect.height)
+    onChange({ x: lockedX, y })
   }
 
   function handlePointerDown(event: ReactPointerEvent<HTMLDivElement>) {
     event.currentTarget.setPointerCapture(event.pointerId)
-    updateFromClientPosition(event.clientX, event.clientY)
+    updateFromClientY(event.clientY)
   }
 
   function handlePointerMove(event: ReactPointerEvent<HTMLDivElement>) {
     if (event.buttons === 0) return
-    updateFromClientPosition(event.clientX, event.clientY)
+    updateFromClientY(event.clientY)
   }
 
   return (
-    <div
-      role="slider"
-      aria-label="Ajustar línea de nacimiento del pelo"
-      aria-valuenow={Math.round(position.y * 100)}
-      aria-valuemin={0}
-      aria-valuemax={100}
-      onPointerDown={handlePointerDown}
-      onPointerMove={handlePointerMove}
-      // Target de 56px (sección 10: "targets de 56 px mínimo, todo alcanzable
-      // con un pulgar"), aunque el punto visual sea más chico.
-      className="absolute z-10 flex h-14 w-14 -translate-x-1/2 -translate-y-1/2 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
-      style={{ left: `${position.x * 100}%`, top: `${position.y * 100}%` }}
-    >
-      <div className="h-6 w-6 rounded-full border-4 border-neutral-950 bg-lime-400 shadow-[0_0_0_2px_rgba(255,255,255,0.6)]" />
-    </div>
+    <>
+      <div
+        role="slider"
+        aria-label="Ajustar línea de nacimiento del pelo"
+        aria-valuenow={Math.round(position.y * 100)}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        onPointerDown={handlePointerDown}
+        onPointerMove={handlePointerMove}
+        className="absolute inset-0 z-10 cursor-grab touch-none active:cursor-grabbing"
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed border-lime-400"
+        style={{ top: `${position.y * 100}%` }}
+      />
+    </>
   )
 }
 
