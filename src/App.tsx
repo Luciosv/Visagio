@@ -269,11 +269,10 @@ function App() {
       {stage === 'ajuste-nacimiento' && (
         <>
           <div className="mt-4 w-full max-w-sm rounded-xl border border-sky-500 bg-sky-950 px-4 py-3 text-sm text-sky-200">
-            Arrastrá en cualquier parte de la foto (arriba o abajo) para mover
-            la línea punteada hasta donde arranca de verdad el pelo. Al tocar,
-            la línea aparece un poco arriba de tu dedo a propósito, para que no
-            la tapes. El punto 10 del mesh es solo una aproximación de la
-            frente, no el nacimiento real.
+            Tocá cerca de la línea punteada y arrastrá hasta donde arranca de
+            verdad el pelo. Al tocar, la línea aparece un poco arriba de tu
+            dedo a propósito, para que no la tapes. El punto 10 del mesh es
+            solo una aproximación de la frente, no el nacimiento real.
           </div>
           <button
             type="button"
@@ -407,13 +406,17 @@ interface HairlineHandleProps {
   readonly onChange: (point: Point2D) => void
 }
 
+/** Cuánto más arriba del dedo se dibuja la línea, para que nunca quede tapada. */
+const HAIRLINE_DRAG_OFFSET_PX = 80
+
 /**
- * Ese mismo desfasaje es la razón por la que se agrandó la superficie de
- * arrastre a toda la foto (ver `HairlineHandle` abajo) en vez de un handle
- * chico: no hace falta acertarle a un punto exacto, alcanza con tocar en
- * cualquier lado de la imagen y mover el dedo.
+ * Alto de la franja "agarrable" alrededor de la línea (no toda la foto): así
+ * tocar lejos de la línea (por ejemplo para hacer scroll hacia el botón de
+ * confirmar más abajo) no dispara un arrastre por accidente. Reportado con
+ * uso real: cubrir toda la foto como superficie de arrastre competía con el
+ * scroll de la página.
  */
-const HAIRLINE_DRAG_OFFSET_PX = 48
+const HAIRLINE_GRAB_ZONE_HEIGHT_PX = 72
 
 /**
  * Ajuste del nacimiento del pelo (7.4 de CLAUDE.md), como una línea punteada
@@ -421,16 +424,18 @@ const HAIRLINE_DRAG_OFFSET_PX = 48
  * real que un punto chico, y tapa menos la foto.
  *
  * Dos decisiones para el problema de "el dedo tapa lo que estás moviendo":
- * 1. La superficie de arrastre es TODA la foto (el `div` de abajo cubre el
- *    canvas entero), no un handle chico — tocás en cualquier lado y arrastrás,
- *    no hace falta acertarle a un punto.
- * 2. La línea se dibuja `HAIRLINE_DRAG_OFFSET_PX` más arriba de donde está el
- *    dedo realmente. Se mueve 1 a 1 con el dedo (mismo patrón que el cursor de
- *    texto de iOS al mantener presionado), así que se sigue sintiendo
- *    conectada al gesto, pero nunca queda tapada por el dedo.
+ * 1. Solo se puede arrastrar tocando CERCA de la línea (franja de
+ *    `HAIRLINE_GRAB_ZONE_HEIGHT_PX`, centrada en su posición actual), no en
+ *    cualquier parte de la foto — el resto de la foto queda libre para hacer
+ *    scroll normal.
+ * 2. Una vez que se empieza a arrastrar, la línea se dibuja
+ *    `HAIRLINE_DRAG_OFFSET_PX` más arriba de donde está el dedo realmente.
+ *    Se mueve 1 a 1 con el dedo (mismo patrón que el cursor de texto de iOS
+ *    al mantener presionado), así que se sigue sintiendo conectada al gesto,
+ *    pero nunca queda tapada.
  *
  * Usa Pointer Events con `setPointerCapture` para que el arrastre con el dedo
- * no se corte si se sale un poco del elemento.
+ * no se corte si se sale un poco de la franja.
  */
 function HairlineHandle({ position, lockedX, canvas, onChange }: HairlineHandleProps) {
   function updateFromClientY(clientY: number) {
@@ -461,7 +466,8 @@ function HairlineHandle({ position, lockedX, canvas, onChange }: HairlineHandleP
         aria-valuemax={100}
         onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
-        className="absolute inset-0 z-10 cursor-grab touch-none active:cursor-grabbing"
+        className="absolute inset-x-0 z-10 -translate-y-1/2 cursor-grab touch-none active:cursor-grabbing"
+        style={{ top: `${position.y * 100}%`, height: `${HAIRLINE_GRAB_ZONE_HEIGHT_PX}px` }}
       />
       <div
         className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed border-lime-400"
