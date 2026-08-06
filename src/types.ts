@@ -348,3 +348,19 @@ export interface CutRecommendation {
    */
   readonly caminoEnVariosCortes: boolean
 }
+
+/**
+ * Feature flags de `public/data/config.json` (sección 6 de CLAUDE.md: "un
+ * `config.json` chico al lado de `cuts.json` con banderas booleanas. Permite
+ * prender o apagar una pantalla sin redeploy"). Se pide con `fetch` en
+ * runtime, igual que `cuts.seed.json`, nunca se importa al bundle.
+ */
+export interface AppConfig {
+  /**
+   * Muestra los paneles de debug (ratios crudos de pose/nitidez, calibración
+   * de nacimiento, ratios R1-R6 y puntaje crudo de forma de cara). `false`
+   * por defecto: son números pensados para el desarrollador, no para el
+   * barbero (sección 10: "el modo debug detrás de un flag").
+   */
+  readonly mostrarDebug: boolean
+}

@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from 'react'
 import type {
+  AppConfig,
   BarberInput,
   ClientFlag,
   Cut,
@@ -89,6 +90,9 @@ const CUT_LENGTH_LABELS: Record<CutLength, string> = {
 /** Cuántos cortes del ranking completo se muestran en la pantalla de resultados (sección 11: "top 3-5 con maniquí"). */
 const RESULTS_TOP_N = 5
 
+/** Default seguro mientras `config.json` todavía no cargó (o si falla): sin debug, que es lo que tiene que ver el barbero (sección 6). */
+const DEFAULT_CONFIG: AppConfig = { mostrarDebug: false }
+
 /**
  * Todo lo que la pantalla de resultados necesita para mostrar las cards y
  * armar el porqué de cada una (`explain.ts` pide el desglose MÁS el
@@ -166,6 +170,13 @@ function App() {
   const [cuts, setCuts] = useState<readonly Cut[] | null>(null)
   const [cutsError, setCutsError] = useState<string | null>(null)
 
+  // `config.json` (sección 6: "feature flags"), mismo patrón de fetch en
+  // runtime que `cuts.seed.json` y por la misma razón: prender/apagar un
+  // panel sin redeploy. Arranca en el default seguro (sin debug) hasta que
+  // llegue la respuesta, para que un barbero real nunca vea el flash de un
+  // panel numérico mientras carga.
+  const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG)
+
   // Resultado de `recommendCuts` más el contexto que necesita `explain.ts`
   // para armar el porqué de cada card (sección 9). Se arma una sola vez al
   // tocar "Ver recomendaciones" y no se vuelve a recalcular al filtrar por
@@ -191,6 +202,32 @@ function App() {
         if (!cancelled) {
           setCutsError(error instanceof Error ? error.message : 'No se pudo cargar la base de cortes.')
         }
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  useEffect(() => {
+    let cancelled = false
+    // Conveniencia solo para desarrollo local: `?debug=1` en la URL fuerza
+    // `mostrarDebug: true` sin tener que editar `config.json` a mano. No
+    // reemplaza el flag (que sigue siendo la fuente de verdad para el
+    // barbero real), solo lo pisa localmente en el navegador de quien abrió
+    // la URL con el query param.
+    const forceDebug = new URLSearchParams(window.location.search).get('debug') === '1'
+    fetch('/data/config.json')
+      .then((response) => {
+        if (!response.ok) throw new Error('No se pudo cargar la configuración.')
+        return response.json() as Promise<AppConfig>
+      })
+      .then((data) => {
+        if (!cancelled) setConfig({ ...data, mostrarDebug: data.mostrarDebug || forceDebug })
+      })
+      .catch(() => {
+        // Si `config.json` no está o falla, se sigue con el default seguro
+        // (sin debug) — salvo que el query param de conveniencia lo pida.
+        if (!cancelled && forceDebug) setConfig({ ...DEFAULT_CONFIG, mostrarDebug: true })
       })
     return () => {
       cancelled = true
@@ -510,7 +547,7 @@ function App() {
         </>
       )}
 
-      {debugInfo && (
+      {config.mostrarDebug && debugInfo && (
         <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-xs text-neutral-300">
           <p className="mb-2 font-semibold text-neutral-100">Ratios crudos (debug)</p>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
@@ -535,7 +572,7 @@ function App() {
         </div>
       )}
 
-      {hairlineSuggested && hairlineCorrected && (
+      {config.mostrarDebug && hairlineSuggested && hairlineCorrected && (
         <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-xs text-neutral-300">
           <p className="mb-2 font-semibold text-neutral-100">
             Calibración de nacimiento (debug)
@@ -559,7 +596,7 @@ function App() {
         </div>
       )}
 
-      {ratios && (
+      {config.mostrarDebug && ratios && (
         <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
           <p className="mb-2 font-semibold text-neutral-100">Ratios faciales (R1-R6)</p>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
@@ -639,7 +676,7 @@ function App() {
         </div>
       )}
 
-      {faceShapeClassification && faceShapeSuggested && faceShapeCorrected && (
+      {config.mostrarDebug && faceShapeClassification && faceShapeSuggested && faceShapeCorrected && (
         <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-xs text-neutral-300">
           <p className="mb-2 font-semibold text-neutral-100">Forma de cara (debug)</p>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
