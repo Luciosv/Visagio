@@ -95,13 +95,20 @@ imprimir o armar un catálogo. No es prioridad del MVP.
 
 **Qué lleva la imagen compartible:**
 - Nombre del corte + imagen de maniquí
-- La spec técnica en texto plano ("2 en los costados, degradado bajo, 6 cm arriba
-  texturizado, nuca cuadrada")
 - Cada cuánto volver
 - Producto y cuánto tarda en peinarse a la mañana
 - Marca de la barbería
 - **Sin la foto del cliente**, sin la palabra "IA", sin porcentajes de confianza.
   Eso es interno del barbero, no del cliente.
+
+**Decisión revisada (rediseño UI/UX, Fase F): sin la spec técnica de máquina.**
+La versión original de esta lista incluía "la spec técnica en texto plano ('2 en
+los costados, degradado bajo, 6 cm arriba texturizado, nuca cuadrada')". Se sacó:
+esa spec es lenguaje del barbero (números de máquina, alturas de degradado), no
+del cliente, que la recibe por WhatsApp sin nadie al lado para traducirla. Sigue
+viva en la app, en el Detalle de cada corte, que es donde el barbero la consulta
+y la usa. La ficha compartible queda así puramente client-facing: qué corte es,
+cómo se ve, cuándo volver y cómo mantenerlo en casa.
 
 ### 2.3. ¿Cómo llegan los datos del barbero al desarrollador?
 

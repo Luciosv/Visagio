@@ -419,6 +419,28 @@ export interface ClienteFicha {
    * explícito antes de guardar nada (secciones 5 y 14), nunca automática.
    */
   readonly fotoReferencia?: Blob
+  /**
+   * Últimos valores del form de 5 taps (7.7) que el barbero confirmó con
+   * "Este hice" para este cliente (Fase G del rediseño UI/UX: "Ajustar"
+   * precarga textura/densidad/minutos/largo, no solo los flags). Se
+   * actualiza en cada `crearFicha`/`agregarHistorial` que venga con un
+   * `BarberInput` real. A propósito DISTINTO de `MorfologiaCliente`: esto es
+   * la PREFERENCIA declarada en la última visita (textura, densidad,
+   * cuánto se peina, largo actual del pelo), no morfología física de la
+   * cara — no va adentro de `morfologia`.
+   *
+   * Opcional a propósito: las fichas creadas antes de esta fase no lo
+   * tienen (esquema v2 de `db.ts`), y se leen sin él — `BuscarClienteScreen`
+   * precarga en blanco en ese caso, igual que hacía antes de esta fase. No
+   * hace falta migrar los registros existentes (ver `db.ts`, `DB_VERSION`
+   * v2 → v3): un campo opcional ausente no rompe nada al leerlo.
+   */
+  readonly ultimoForm?: {
+    readonly textura: HairTexture
+    readonly densidad: HairDensity
+    readonly minutosDeclarados: number
+    readonly largoActualArriba: LargoActualArriba
+  }
 }
 
 // ---------------------------------------------------------------------------

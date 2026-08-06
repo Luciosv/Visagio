@@ -27,10 +27,14 @@
 // guardada (o el top1 si no la hubo) con `applyFaceShapeOverride`. El form de
 // 5 taps arranca con los flags de implantación/restricción PRE-CARGADOS
 // desde `morfologia.flags` (son datos físicos del cliente, con buena chance
-// de seguir vigentes) pero textura/densidad/minutos/largo actual arrancan en
-// blanco: no hay ningún lugar donde `ClienteFicha` los haya guardado de la
-// visita anterior, y son justamente los que más chance tienen de haber
-// cambiado (ver comentario de la sección 9 del prompt de esta fase).
+// de seguir vigentes) y, desde la Fase G del rediseño UI/UX, también con
+// textura/densidad/minutos/largo actual PRE-CARGADOS desde
+// `ficha.ultimoForm` (el form que se confirmó la última vez que se tocó
+// "Este hice" con este cliente) — son justamente los que más chance tienen
+// de haber cambiado, así que quedan editables, no fijos: el barbero confirma
+// o ajusta en un tap en vez de repetir 4 taps desde cero. Fichas creadas
+// antes de esa fase (esquema v2, sin `ultimoForm`) arrancan esos cuatro
+// campos en blanco, igual que se comportaba todo el form antes.
 
 import { useEffect, useState } from 'react'
 import type {
@@ -135,12 +139,16 @@ export function BuscarClienteScreen({ onExit }: BuscarClienteScreenProps) {
     setFichaView({ kind: 'ficha' })
     setRepetirError(null)
     // El form de "Ajustar" arranca con los flags guardados pre-cargados (ver
-    // comentario de arriba del archivo) y el resto en blanco.
-    setTextura(null)
-    setDensidad(null)
+    // comentario de arriba del archivo) MÁS textura/densidad/minutos/largo
+    // desde `ficha.ultimoForm` cuando existe (Fase G: fichas creadas antes
+    // de esa fase no lo tienen — esquema v2 — y arrancan en blanco, igual
+    // que antes).
+    const ultimoForm = ficha.ultimoForm
+    setTextura(ultimoForm?.textura ?? null)
+    setDensidad(ultimoForm?.densidad ?? null)
     setFlags(ficha.morfologia.flags)
-    setMinutosDeclarados(null)
-    setLargoActualArriba(null)
+    setMinutosDeclarados(ultimoForm?.minutosDeclarados ?? null)
+    setLargoActualArriba(ultimoForm?.largoActualArriba ?? null)
   }
 
   function closeFicha() {
@@ -243,18 +251,18 @@ export function BuscarClienteScreen({ onExit }: BuscarClienteScreenProps) {
 
   if (selectedFicha && fichaView.kind === 'ajustando') {
     return (
-      <div className="flex min-h-svh flex-col items-center bg-neutral-950 px-4 pb-16 pt-8 text-neutral-50">
+      <div className="flex min-h-svh flex-col items-center bg-app px-4 pb-16 pt-8 text-ink">
         <div className="flex w-full max-w-sm items-center">
           <button
             type="button"
             onClick={() => setFichaView({ kind: 'ficha' })}
-            className="min-h-14 px-2 text-sm font-semibold text-neutral-300"
+            className="min-h-14 px-2 text-sm font-semibold text-ink-muted"
           >
             ← Volver a la ficha
           </button>
         </div>
-        <h1 className="mt-2 w-full max-w-sm text-2xl font-semibold tracking-tight">Ajustar — {selectedFicha.alias}</h1>
-        <p className="mt-1 w-full max-w-sm text-sm text-neutral-400">
+        <h1 className="mt-2 w-full max-w-sm font-display text-2xl font-semibold text-ink">Ajustar — {selectedFicha.alias}</h1>
+        <p className="mt-1 w-full max-w-sm text-sm text-ink-muted">
           Se usa la forma de cara y los ratios ya guardados. Solo hace falta confirmar lo que puede haber cambiado.
         </p>
 
@@ -285,38 +293,38 @@ export function BuscarClienteScreen({ onExit }: BuscarClienteScreenProps) {
     const { morfologia } = selectedFicha
 
     return (
-      <div className="flex min-h-svh flex-col items-center bg-neutral-950 px-4 pb-20 pt-8 text-neutral-50">
+      <div className="flex min-h-svh flex-col items-center bg-app px-4 pb-20 pt-8 text-ink">
         <div className="flex w-full max-w-sm items-center">
-          <button type="button" onClick={closeFicha} className="min-h-14 px-2 text-sm font-semibold text-neutral-300">
+          <button type="button" onClick={closeFicha} className="min-h-14 px-2 text-sm font-semibold text-ink-muted">
             ← Volver a la búsqueda
           </button>
         </div>
 
-        <h1 className="mt-2 w-full max-w-sm text-2xl font-semibold tracking-tight">{selectedFicha.alias}</h1>
+        <h1 className="mt-2 w-full max-w-sm font-display text-2xl font-semibold text-ink">{selectedFicha.alias}</h1>
 
-        <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
-          <p className="mb-2 font-semibold text-neutral-100">Morfología</p>
+        <div className="panel mt-4 w-full max-w-sm px-4 py-3 text-sm text-ink">
+          <p className="mb-2 font-semibold text-ink">Morfología</p>
           <p>
             Forma sugerida:{' '}
-            <span className="font-semibold text-lime-400">
+            <span className="font-semibold text-accent-ink">
               {FACE_SHAPE_LABELS[morfologia.formaSugerida.shape]} ({Math.round(morfologia.formaSugerida.confidence * 100)}%)
             </span>
           </p>
           {morfologia.formaCorregida && (
             <p className="mt-1">
-              Corregida por el barbero a: <span className="font-semibold text-neutral-50">{FACE_SHAPE_LABELS[morfologia.formaCorregida]}</span>
+              Corregida por el barbero a: <span className="font-semibold text-ink">{FACE_SHAPE_LABELS[morfologia.formaCorregida]}</span>
             </p>
           )}
-          <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-neutral-300">
-            <dt className="text-neutral-500">R1 · Largo / ancho cara</dt>
+          <dl className="mt-3 grid grid-cols-2 gap-x-3 gap-y-1 text-xs text-ink-muted">
+            <dt className="text-ink-faint">R1 · Largo / ancho cara</dt>
             <dd>{morfologia.ratios.r1.toFixed(2)}</dd>
-            <dt className="text-neutral-500">R2 · Frente / ancho cara</dt>
+            <dt className="text-ink-faint">R2 · Frente / ancho cara</dt>
             <dd>{morfologia.ratios.r2.toFixed(2)}</dd>
-            <dt className="text-neutral-500">R3 · Mandíbula / ancho cara</dt>
+            <dt className="text-ink-faint">R3 · Mandíbula / ancho cara</dt>
             <dd>{morfologia.ratios.r3.toFixed(2)}</dd>
-            <dt className="text-neutral-500">R4 · Ángulo mandibular</dt>
+            <dt className="text-ink-faint">R4 · Ángulo mandibular</dt>
             <dd>{morfologia.ratios.r4.toFixed(0)}°</dd>
-            <dt className="text-neutral-500">R5 · Altura de frente</dt>
+            <dt className="text-ink-faint">R5 · Altura de frente</dt>
             <dd>{morfologia.ratios.r5.toFixed(2)}</dd>
           </dl>
           {morfologia.flags.length > 0 && (
@@ -324,7 +332,7 @@ export function BuscarClienteScreen({ onExit }: BuscarClienteScreenProps) {
               {morfologia.flags.map((flag) => (
                 <span
                   key={flag}
-                  className="rounded-full border border-neutral-700 bg-neutral-800 px-2 py-0.5 text-xs text-neutral-300"
+                  className="rounded-full border border-line bg-surface-2 px-2 py-0.5 text-xs text-ink-muted"
                 >
                   {FLAG_CHIP_LABELS[flag]}
                 </span>
@@ -333,24 +341,24 @@ export function BuscarClienteScreen({ onExit }: BuscarClienteScreenProps) {
           )}
         </div>
 
-        <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
-          <p className="mb-2 font-semibold text-neutral-100">Historial</p>
+        <div className="panel mt-4 w-full max-w-sm px-4 py-3 text-sm text-ink">
+          <p className="mb-2 font-semibold text-ink">Historial</p>
           <ul className="flex flex-col gap-3">
             {sortedHistorial.map((entry, index) => (
-              <li key={`${entry.fecha}-${index}`} className="border-t border-neutral-800 pt-3 first:border-t-0 first:pt-0">
-                <p className="text-xs text-neutral-500">{formatFecha(entry.fecha)}</p>
-                <p className="font-semibold text-neutral-50">{entry.corteNombre}</p>
-                <p className="mt-1 text-xs text-neutral-400">
+              <li key={`${entry.fecha}-${index}`} className="border-t border-line pt-3 first:border-t-0 first:pt-0">
+                <p className="text-xs text-ink-faint">{formatFecha(entry.fecha)}</p>
+                <p className="font-semibold text-ink">{entry.corteNombre}</p>
+                <p className="mt-1 text-xs text-ink-muted">
                   {entry.spec.costados} · {entry.spec.arriba} · {entry.spec.nuca} · {entry.spec.contorno}
                 </p>
-                {entry.nota && <p className="mt-1 text-xs italic text-neutral-500">{entry.nota}</p>}
+                {entry.nota && <p className="mt-1 text-xs italic text-ink-faint">{entry.nota}</p>}
               </li>
             ))}
           </ul>
         </div>
 
         {repetirError && (
-          <div className="mt-4 w-full max-w-sm rounded-xl border border-amber-500 bg-amber-950 px-4 py-3 text-sm text-amber-200">
+          <div className="mt-4 w-full max-w-sm rounded-xl border border-danger bg-danger-surface px-4 py-3 text-sm text-danger-ink">
             {repetirError}
           </div>
         )}
@@ -360,14 +368,14 @@ export function BuscarClienteScreen({ onExit }: BuscarClienteScreenProps) {
             type="button"
             onClick={handleRepetir}
             disabled={cuts === null}
-            className="min-h-14 w-full rounded-xl bg-lime-400 px-6 text-base font-semibold text-neutral-950 transition active:scale-[0.98] disabled:opacity-50"
+            className="btn btn-primary w-full"
           >
             {cuts === null ? 'Cargando…' : 'Repetir el último'}
           </button>
           <button
             type="button"
             onClick={() => setFichaView({ kind: 'ajustando' })}
-            className="min-h-14 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-6 text-base font-semibold text-neutral-100 transition active:scale-[0.98]"
+            className="btn btn-secondary w-full"
           >
             Ajustar
           </button>
@@ -385,40 +393,40 @@ export function BuscarClienteScreen({ onExit }: BuscarClienteScreenProps) {
     fichas === null ? [] : normalizedQuery === '' ? fichas : fichas.filter((f) => f.alias.toLowerCase().includes(normalizedQuery))
 
   return (
-    <div className="flex min-h-svh flex-col items-center bg-neutral-950 px-4 pb-16 pt-8 text-neutral-50">
+    <div className="flex min-h-svh flex-col items-center bg-app px-4 pb-16 pt-8 text-ink">
       <div className="flex w-full max-w-sm items-center">
-        <button type="button" onClick={onExit} className="min-h-14 px-2 text-sm font-semibold text-neutral-300">
+        <button type="button" onClick={onExit} className="min-h-14 px-2 text-sm font-semibold text-ink-muted">
           ← Inicio
         </button>
       </div>
 
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">Buscar cliente</h1>
-      <p className="mt-1 text-sm text-neutral-400">Alias, historial y repetir el último corte</p>
+      <h1 className="mt-2 font-display text-2xl font-semibold text-ink">Buscar cliente</h1>
+      <p className="mt-1 text-sm text-ink-muted">Alias, historial y repetir el último corte</p>
 
       <input
         type="text"
         value={query}
         onChange={(event) => setQuery(event.target.value)}
         placeholder="Buscar por alias…"
-        className="mt-6 min-h-14 w-full max-w-sm rounded-xl border border-neutral-700 bg-neutral-900 px-4 text-base text-neutral-50 placeholder:text-neutral-600"
+        className="mt-6 min-h-14 w-full max-w-sm rounded-xl border border-line bg-surface px-4 text-base text-ink placeholder:text-ink-faint"
       />
 
       {loadError && (
-        <div className="mt-4 w-full max-w-sm rounded-xl border border-red-500 bg-red-950 px-4 py-3 text-sm text-red-200">
+        <div className="mt-4 w-full max-w-sm rounded-xl border border-danger bg-danger-surface px-4 py-3 text-sm text-danger-ink">
           {loadError}
         </div>
       )}
 
-      {fichas === null && !loadError && <p className="mt-8 text-sm text-neutral-500">Cargando fichas…</p>}
+      {fichas === null && !loadError && <p className="mt-8 text-sm text-ink-muted">Cargando fichas…</p>}
 
       {fichas !== null && fichas.length === 0 && (
-        <p className="mt-8 max-w-sm text-center text-sm text-neutral-400">
+        <p className="mt-8 max-w-sm text-center text-sm text-ink-muted">
           Todavía no hay ninguna ficha guardada. Se crean automáticamente desde "Cliente nuevo" al tocar "Este hice".
         </p>
       )}
 
       {fichas !== null && fichas.length > 0 && filtered.length === 0 && (
-        <p className="mt-8 max-w-sm text-center text-sm text-neutral-400">Ningún cliente con ese alias.</p>
+        <p className="mt-8 max-w-sm text-center text-sm text-ink-muted">Ningún cliente con ese alias.</p>
       )}
 
       <ul className="mt-4 flex w-full max-w-sm flex-col gap-2">
@@ -429,11 +437,11 @@ export function BuscarClienteScreen({ onExit }: BuscarClienteScreenProps) {
               <button
                 type="button"
                 onClick={() => openFicha(ficha)}
-                className="flex min-h-14 w-full flex-col items-start rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-left transition active:scale-[0.98]"
+                className="panel flex min-h-14 w-full flex-col items-start px-4 py-3 text-left transition active:scale-[0.98]"
               >
-                <span className="font-semibold text-neutral-50">{ficha.alias}</span>
+                <span className="font-semibold text-ink">{ficha.alias}</span>
                 {last && (
-                  <span className="mt-0.5 text-xs text-neutral-500">
+                  <span className="mt-0.5 text-xs text-ink-muted">
                     Último: {formatFecha(last.fecha)} · {last.corteNombre}
                   </span>
                 )}

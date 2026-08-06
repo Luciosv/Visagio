@@ -12,7 +12,15 @@
 // (`db.test.ts`) corren contra `fake-indexeddb`, no contra un navegador real.
 
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { ClienteFicha, EventoFeedback, HistorialEntry, MorfologiaCliente } from '../types'
+import type {
+  ClienteFicha,
+  EventoFeedback,
+  HairDensity,
+  HairTexture,
+  HistorialEntry,
+  LargoActualArriba,
+  MorfologiaCliente,
+} from '../types'
 
 const DB_NAME = 'visagio'
 
@@ -29,8 +37,17 @@ const DB_NAME = 'visagio'
  * base que ya venía en v1 con fichas cargadas las conserva sin tocarlas y
  * solo gana el store nuevo vacío (sección 6, regla 4: "un cambio de esquema
  * sin migración le borra los clientes, y ahí se termina la prueba").
+ * v3 (Fase G del rediseño UI/UX): `ClienteFicha` gana el campo OPCIONAL
+ * `ultimoForm` (ver `types.ts`). No es un cambio de FORMA del store — no se
+ * agrega índice, no cambia el `keyPath`, no hay que tocar ningún registro
+ * existente — es un campo aditivo y opcional que IndexedDB no valida contra
+ * ningún esquema propio (no es SQL). Por eso el bloque `if (oldVersion < 3)`
+ * de abajo es intencionalmente NO-OP. Igual se sube el número y se deja el
+ * bloque, aunque no haga nada: es la regla del repo (sección 6, regla 4),
+ * para que la próxima persona que agregue una migración real tenga el lugar
+ * ya marcado y no tenga que acordarse de subir la versión desde cero.
  */
-const DB_VERSION = 2
+const DB_VERSION = 3
 
 const FICHAS_STORE = 'fichas'
 const ALIAS_INDEX = 'alias'
@@ -78,6 +95,18 @@ function getDb(): Promise<IDBPDatabase<VisagioDBSchema>> {
           db.createObjectStore(EVENTOS_FEEDBACK_STORE, { autoIncrement: true })
         }
 
+        // v3 (Fase G): NO-OP a propósito. `ClienteFicha.ultimoForm` es un
+        // campo nuevo pero OPCIONAL — las fichas que ya existen en el store
+        // `fichas` siguen siendo objetos válidos sin él (se leen con
+        // `ficha.ultimoForm` `undefined`, que es exactamente lo que la UI ya
+        // trata como "en blanco"). No hace falta recorrer y reescribir
+        // registros, ni tocar el índice `alias` ni el `keyPath`. Ver el
+        // comentario de `DB_VERSION` arriba sobre por qué el bloque existe
+        // igual.
+        if (oldVersion < 3) {
+          // (no-op, ver comentario arriba)
+        }
+
         // ACÁ ABAJO van los `if (oldVersion < N)` de futuras versiones del
         // esquema, en orden, cada uno migrando los registros que ya existen
         // (nunca `clear()`/recrear un store con datos adentro).
@@ -98,12 +127,34 @@ export function __resetDbConnectionForTests(): void {
   dbPromise = null
 }
 
+/**
+ * Último form de 5 taps confirmado con "Este hice" (Fase G: ver
+ * `ClienteFicha.ultimoForm` en `types.ts`). Mismos 4 campos que ese tipo —
+ * se repite acá en vez de reusar `ClienteFicha['ultimoForm']` porque es la
+ * forma de INPUT de `crearFicha`/`agregarHistorial`, no la del registro
+ * guardado (aunque hoy coincidan campo a campo).
+ */
+export interface UltimoForm {
+  readonly textura: HairTexture
+  readonly densidad: HairDensity
+  readonly minutosDeclarados: number
+  readonly largoActualArriba: LargoActualArriba
+}
+
 /** Datos necesarios para crear una ficha nueva (sección 10: alias pedido al tocar "Este hice" en el flujo de cliente nuevo). */
 export interface CrearFichaInput {
   readonly alias: string
   readonly morfologia: MorfologiaCliente
   /** Primera entrada de historial, el corte que se acaba de elegir. */
   readonly primerHistorial: HistorialEntry
+  /**
+   * Form del barbero de ESTA consulta (Fase G), para precargar "Ajustar" en
+   * la próxima visita. Opcional porque en teoría se podría llamar a
+   * `crearFicha` sin un `BarberInput` a mano — en la práctica hoy siempre
+   * hay uno (el camino "cliente nuevo" de `ResultsScreen.tsx` lo tiene), pero
+   * la función no debe exigirlo.
+   */
+  readonly ultimoForm?: UltimoForm
 }
 
 /** Crea una ficha nueva con un `id` propio (UUID) y la guarda. */
@@ -117,6 +168,7 @@ export async function crearFicha(input: CrearFichaInput): Promise<ClienteFicha> 
     actualizadoEn: now,
     morfologia: input.morfologia,
     historial: [input.primerHistorial],
+    ...(input.ultimoForm ? { ultimoForm: input.ultimoForm } : {}),
   }
   await db.put(FICHAS_STORE, ficha)
   return ficha
@@ -127,10 +179,17 @@ export async function crearFicha(input: CrearFichaInput): Promise<ClienteFicha> 
  * Fase 6b). Devuelve `undefined` si la ficha no existe (no debería pasar en
  * uso normal, pero no es responsabilidad de esta función decidir qué hacer
  * en ese caso — el llamador ve el `undefined` y reacciona).
+ *
+ * `ultimoForm` (Fase G) es opcional: cuando se pasa (camino "Buscar cliente
+ * → Ajustar", que sí tiene un `BarberInput` real de esta visita) actualiza
+ * el último form guardado en la ficha. Cuando se omite (camino "Repetir el
+ * último": no hay form nuevo, el barbero no tocó nada) el `ultimoForm`
+ * existente de la ficha queda tal cual — nunca se pisa con `undefined`.
  */
 export async function agregarHistorial(
   fichaId: string,
   entry: HistorialEntry,
+  ultimoForm?: UltimoForm,
 ): Promise<ClienteFicha | undefined> {
   const db = await getDb()
   const existing = await db.get(FICHAS_STORE, fichaId)
@@ -140,6 +199,7 @@ export async function agregarHistorial(
     ...existing,
     actualizadoEn: new Date().toISOString(),
     historial: [...existing.historial, entry],
+    ...(ultimoForm ? { ultimoForm } : {}),
   }
   await db.put(FICHAS_STORE, updated)
   return updated

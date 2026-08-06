@@ -200,6 +200,86 @@ describe('cola de feedback (Fase 7, sección 2.3)', () => {
   })
 })
 
+describe('ultimoForm (Fase G del rediseño UI/UX)', () => {
+  function buildUltimoForm() {
+    return {
+      textura: 'ondulado' as const,
+      densidad: 'medio' as const,
+      minutosDeclarados: 2,
+      largoActualArriba: 'corto_tijera' as const,
+    }
+  }
+
+  it('crearFicha con ultimoForm lo persiste, y obtenerFicha/listarFichas lo devuelven', async () => {
+    const ultimoForm = buildUltimoForm()
+    const ficha = await crearFicha({
+      alias: 'Con form',
+      morfologia: buildMorfologia(),
+      primerHistorial: buildHistorial(),
+      ultimoForm,
+    })
+
+    expect(ficha.ultimoForm).toEqual(ultimoForm)
+
+    const fromDb = await obtenerFicha(ficha.id)
+    expect(fromDb?.ultimoForm).toEqual(ultimoForm)
+
+    const fichas = await listarFichas()
+    expect(fichas[0]?.ultimoForm).toEqual(ultimoForm)
+  })
+
+  it('crearFicha sin ultimoForm no lo agrega (fichas viejas siguen sin el campo)', async () => {
+    const ficha = await crearFicha({
+      alias: 'Sin form',
+      morfologia: buildMorfologia(),
+      primerHistorial: buildHistorial(),
+    })
+
+    expect(ficha.ultimoForm).toBeUndefined()
+    const fromDb = await obtenerFicha(ficha.id)
+    expect(fromDb?.ultimoForm).toBeUndefined()
+  })
+
+  it('agregarHistorial con ultimoForm lo actualiza en la ficha', async () => {
+    const ficha = await crearFicha({
+      alias: 'Actualiza form',
+      morfologia: buildMorfologia(),
+      primerHistorial: buildHistorial(),
+      ultimoForm: buildUltimoForm(),
+    })
+
+    const nuevoForm = { textura: 'rulo' as const, densidad: 'grueso' as const, minutosDeclarados: 5, largoActualArriba: 'media_melena' as const }
+    const updated = await agregarHistorial(
+      ficha.id,
+      buildHistorial({ fecha: '2026-09-01T10:00:00.000Z', corteId: 'french-crop', corteNombre: 'French crop' }),
+      nuevoForm,
+    )
+
+    expect(updated?.ultimoForm).toEqual(nuevoForm)
+    const fromDb = await obtenerFicha(ficha.id)
+    expect(fromDb?.ultimoForm).toEqual(nuevoForm)
+  })
+
+  it('agregarHistorial sin ultimoForm no pisa el que ya tenía la ficha (camino "Repetir el último")', async () => {
+    const ultimoForm = buildUltimoForm()
+    const ficha = await crearFicha({
+      alias: 'No se pisa',
+      morfologia: buildMorfologia(),
+      primerHistorial: buildHistorial(),
+      ultimoForm,
+    })
+
+    const updated = await agregarHistorial(
+      ficha.id,
+      buildHistorial({ fecha: '2026-09-01T10:00:00.000Z' }),
+    )
+
+    expect(updated?.ultimoForm).toEqual(ultimoForm)
+    const fromDb = await obtenerFicha(ficha.id)
+    expect(fromDb?.ultimoForm).toEqual(ultimoForm)
+  })
+})
+
 describe('migración de esquema v1 -> v2 (sección 6, regla 4)', () => {
   it('una base que ya tenía fichas en v1 las conserva intactas después de abrir con DB_VERSION=2', async () => {
     // Simula una base "vieja": se abre la conexión a mano en v1 (mismo
@@ -240,5 +320,48 @@ describe('migración de esquema v1 -> v2 (sección 6, regla 4)', () => {
     expect(await contarEventosFeedback()).toBe(0)
     await registrarEventoFeedback(buildEvento())
     expect(await contarEventosFeedback()).toBe(1)
+  })
+})
+
+describe('migración de esquema v2 -> v3 (Fase G, sección 6 regla 4)', () => {
+  it('una base v2 con fichas (sin ultimoForm) las conserva intactas después de abrir con DB_VERSION=3', async () => {
+    // Simula una base "vieja" en v2 (mismos dos stores que crea `db.ts` para
+    // oldVersion < 1 y < 2), con una ficha que no tiene `ultimoForm` — porque
+    // ese campo no existía todavía. Después el código de producción abre esa
+    // misma base con `DB_VERSION = 3` y dispara el upgrade v2 -> v3, que
+    // según `db.ts` es NO-OP sobre el store `fichas`. La ficha vieja tiene
+    // que seguir ahí, intacta, sin que aparezca un `ultimoForm` inventado.
+    const v2Db = await openDB('visagio', 2, {
+      upgrade(db) {
+        const store = db.createObjectStore('fichas', { keyPath: 'id' })
+        store.createIndex('alias', 'alias')
+        db.createObjectStore('eventosFeedback', { autoIncrement: true })
+      },
+    })
+    const fichaVieja = {
+      id: 'ficha-de-la-v2',
+      alias: 'Cliente de antes de ultimoForm',
+      creadoEn: '2026-01-01T00:00:00.000Z',
+      actualizadoEn: '2026-01-01T00:00:00.000Z',
+      morfologia: buildMorfologia(),
+      historial: [buildHistorial()],
+    }
+    await v2Db.put('fichas', fichaVieja)
+    v2Db.close()
+
+    // `getDb()` todavía no se llamó en este test: la próxima llamada abre la
+    // base de cero con la `DB_VERSION` real del módulo (3) y corre el
+    // upgrade path completo hasta `if (oldVersion < 3)`, que no debe tocar
+    // nada del store `fichas`.
+    const fichas = await listarFichas()
+    expect(fichas).toEqual([fichaVieja])
+    expect(fichas[0]?.ultimoForm).toBeUndefined()
+    expect(await contarFichas()).toBe(1)
+
+    // La ficha migrada sigue siendo editable con las funciones normales,
+    // incluido poder setear `ultimoForm` recién ahora que existe el campo.
+    const ultimoForm = { textura: 'lacio' as const, densidad: 'fino' as const, minutosDeclarados: 0, largoActualArriba: 'rapado_maquina' as const }
+    const updated = await agregarHistorial(fichaVieja.id, buildHistorial({ fecha: '2026-09-01T10:00:00.000Z' }), ultimoForm)
+    expect(updated?.ultimoForm).toEqual(ultimoForm)
   })
 })

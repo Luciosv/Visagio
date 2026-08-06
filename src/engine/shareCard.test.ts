@@ -68,17 +68,6 @@ describe('buildShareCardContent', () => {
     expect(content.nombreBarberia).toBe('Barbería Central')
   })
 
-  it('arma la spec técnica en texto plano, una línea por zona', () => {
-    const content = buildShareCardContent(buildRecommendation(), buildConfig())
-
-    expect(content.specLineas).toEqual([
-      'Costados: degradado de piel a #2',
-      'Arriba: 4-6 cm',
-      'Nuca: degradado bajo',
-      'Contorno: difuminado',
-    ])
-  })
-
   it('arma la frase de mantenimiento con las semanas del corte', () => {
     const content = buildShareCardContent(
       buildRecommendation({ id: 'x', mantenimientoSemanas: 3 }),
@@ -131,6 +120,6 @@ describe('buildShareCardContent', () => {
     const content = buildShareCardContent(buildRecommendation(), buildConfig())
     const keys = Object.keys(content)
 
-    expect(keys).toEqual(['nombreCorte', 'imagen', 'specLineas', 'mantenimiento', 'peinado', 'nombreBarberia'])
+    expect(keys).toEqual(['nombreCorte', 'imagen', 'mantenimiento', 'peinado', 'nombreBarberia'])
   })
 })

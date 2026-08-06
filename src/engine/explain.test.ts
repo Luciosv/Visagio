@@ -134,7 +134,8 @@ describe('explainRecommendation', () => {
     const text = explainRecommendation(recommendation, classification, ratios, barberInput)
 
     expect(text).toContain('Restó')
-    expect(text).toContain('8 min de peinado')
+    expect(text).toContain('el peinado: pide 8 min')
+    expect(text).not.toContain('por que')
   })
 
   it('nunca devuelve una frase genérica: siempre incluye un número (ratio, afinidad o minutos)', () => {

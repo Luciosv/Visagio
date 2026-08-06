@@ -69,13 +69,15 @@ export function BarberForm({
   cutsError,
 }: BarberFormProps) {
   return (
-    <div className="mt-6 w-full max-w-sm border-t border-neutral-800 pt-6">
-      <h2 className="text-lg font-semibold text-neutral-100">Datos del pelo y del cliente</h2>
-      <p className="mt-1 text-xs text-neutral-500">
+    <div className="mt-6 w-full max-w-sm border-t border-line pt-6">
+      <h2 className="font-display text-lg font-semibold uppercase tracking-wide text-ink">
+        Datos del pelo y del cliente
+      </h2>
+      <p className="mt-1 text-xs text-ink-muted">
         Tocá lo que corresponda en cada grupo. Sin formulario, todo con el pulgar.
       </p>
 
-      <ChipGroupSection title="1. Textura">
+      <ChipGroupSection title="Textura">
         {HAIR_TEXTURES.map((value) => (
           <Chip
             key={value}
@@ -87,7 +89,7 @@ export function BarberForm({
         ))}
       </ChipGroupSection>
 
-      <ChipGroupSection title="2. Densidad">
+      <ChipGroupSection title="Densidad">
         {HAIR_DENSITIES.map((value) => (
           <Chip
             key={value}
@@ -99,19 +101,7 @@ export function BarberForm({
         ))}
       </ChipGroupSection>
 
-      <ChipGroupSection title="3. Implantación (opcional)">
-        {IMPLANTATION_FLAGS.map((flag) => (
-          <Chip key={flag} label={FLAG_CHIP_LABELS[flag]} selected={flags.includes(flag)} onClick={() => onToggleFlag(flag)} />
-        ))}
-      </ChipGroupSection>
-
-      <ChipGroupSection title="4a. Restricciones (opcional)">
-        {RESTRICTION_FLAGS.map((flag) => (
-          <Chip key={flag} label={FLAG_CHIP_LABELS[flag]} selected={flags.includes(flag)} onClick={() => onToggleFlag(flag)} />
-        ))}
-      </ChipGroupSection>
-
-      <ChipGroupSection title="4b. Minutos que se dedica a peinar">
+      <ChipGroupSection title="Minutos que se peina">
         {MINUTOS_DECLARADOS_OPTIONS.map((value) => (
           <Chip
             key={value}
@@ -122,7 +112,7 @@ export function BarberForm({
         ))}
       </ChipGroupSection>
 
-      <ChipGroupSection title="5. Largo actual arriba">
+      <ChipGroupSection title="Largo actual arriba">
         {LARGO_ACTUAL_ARRIBA_VALUES.map((value) => (
           <Chip
             key={value}
@@ -133,16 +123,38 @@ export function BarberForm({
         ))}
       </ChipGroupSection>
 
+      {/* Separador visual entre lo obligatorio (arriba) y lo opcional (abajo):
+          sigue siendo una sola vista, no un wizard, pero con jerarquía —
+          hallazgo #3 del diagnóstico de UI/UX. */}
+      <div className="mt-6 flex items-center gap-3">
+        <span className="h-px flex-1 bg-line" aria-hidden />
+        <span className="text-xs font-semibold uppercase tracking-wide text-ink-faint">Opcional</span>
+        <span className="h-px flex-1 bg-line" aria-hidden />
+      </div>
+
+      <ChipGroupSection title="Implantación (opcional)">
+        {IMPLANTATION_FLAGS.map((flag) => (
+          <Chip key={flag} label={FLAG_CHIP_LABELS[flag]} selected={flags.includes(flag)} onClick={() => onToggleFlag(flag)} />
+        ))}
+      </ChipGroupSection>
+
+      <ChipGroupSection title="Restricciones (opcional)">
+        {RESTRICTION_FLAGS.map((flag) => (
+          <Chip key={flag} label={FLAG_CHIP_LABELS[flag]} selected={flags.includes(flag)} onClick={() => onToggleFlag(flag)} />
+        ))}
+      </ChipGroupSection>
+
       {cutsError && (
-        <div className="mt-4 rounded-xl border border-red-500 bg-red-950 px-4 py-3 text-sm text-red-200">{cutsError}</div>
+        <div className="panel mt-4 border-danger bg-danger-surface px-4 py-3 text-sm text-danger-ink">{cutsError}</div>
       )}
 
-      <button
-        type="button"
-        disabled={!canSubmit}
-        onClick={onSubmit}
-        className="mt-6 min-h-14 w-full rounded-xl bg-lime-400 px-6 text-lg font-semibold text-neutral-950 transition active:scale-[0.98] disabled:opacity-40"
-      >
+      {!canSubmit && (
+        <p className="mt-6 text-center text-xs text-ink-muted">
+          Elegí textura, densidad, minutos y largo para ver recomendaciones.
+        </p>
+      )}
+
+      <button type="button" disabled={!canSubmit} onClick={onSubmit} className="btn btn-primary mt-2 w-full text-lg">
         {submitLabel}
       </button>
     </div>

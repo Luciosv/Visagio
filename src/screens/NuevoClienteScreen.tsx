@@ -65,7 +65,7 @@ import { recommendCuts } from '../engine/recommend'
 import { useCuts } from '../hooks/useCuts'
 import { useAppConfig } from '../hooks/useAppConfig'
 import { BarberForm } from '../components/BarberForm'
-import { VersionFooter } from '../components/ui'
+import { Chip, VersionFooter } from '../components/ui'
 import { ResultsScreen, type ResultsContext } from './ResultsScreen'
 
 declare global {
@@ -180,7 +180,7 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
     const ctx = canvas.getContext('2d')
     if (!ctx) return
     ctx.drawImage(source, 0, 0)
-    drawLandmarksOverlay(ctx, landmarks, source.width, source.height)
+    drawLandmarksOverlay(ctx, landmarks, source.width, source.height, config.mostrarDebug)
   }
 
   async function handleFile(file: File) {
@@ -406,15 +406,15 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
   }
 
   return (
-    <div className="flex min-h-svh flex-col items-center bg-neutral-950 px-4 pb-16 pt-8 text-neutral-50">
+    <div className="flex min-h-svh flex-col items-center bg-app px-4 pb-16 pt-8 text-ink">
       <div className="flex w-full max-w-sm items-center">
-        <button type="button" onClick={onExit} className="min-h-14 px-2 text-sm font-semibold text-neutral-300">
+        <button type="button" onClick={onExit} className="min-h-14 px-2 text-sm font-semibold text-ink-muted">
           ← Inicio
         </button>
       </div>
 
-      <h1 className="mt-2 text-2xl font-semibold tracking-tight">Cliente nuevo</h1>
-      <p className="mt-1 text-sm text-neutral-400">Foto, forma de cara y recomendación</p>
+      <h1 className="mt-2 font-display text-2xl font-semibold uppercase tracking-wide text-ink">Cliente nuevo</h1>
+      <p className="mt-1 text-sm text-ink-muted">Foto, forma de cara y recomendación</p>
 
       <input
         ref={fileInputRef}
@@ -429,7 +429,7 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
         type="button"
         disabled={isBusy}
         onClick={() => fileInputRef.current?.click()}
-        className="mt-6 min-h-14 w-full max-w-sm rounded-xl bg-lime-400 px-6 text-lg font-semibold text-neutral-950 transition active:scale-[0.98] disabled:opacity-50"
+        className="btn btn-primary mt-6 w-full max-w-sm text-lg"
       >
         {stage === 'cargando-modelo'
           ? 'Cargando modelo…'
@@ -439,7 +439,7 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
       </button>
 
       {errorMessage && (
-        <div className="mt-4 w-full max-w-sm rounded-xl border border-red-500 bg-red-950 px-4 py-3 text-sm text-red-200">
+        <div className="panel mt-4 w-full max-w-sm border-danger bg-danger-surface px-4 py-3 text-sm text-danger-ink">
           {errorMessage}
         </div>
       )}
@@ -447,8 +447,14 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
       <div className="relative mt-6 w-full max-w-sm">
         <canvas
           ref={canvasRef}
-          className="w-full rounded-xl border border-neutral-800 bg-neutral-900"
+          className="w-full rounded-xl border border-line bg-surface-2"
         />
+        {stage === 'idle' && (
+          <p className="pointer-events-none absolute inset-0 flex items-center justify-center px-6 text-center text-sm text-ink-muted">
+            Foto de frente, a ~1,5 m, con la cámara de atrás. Que mire derecho
+            a la cámara.
+          </p>
+        )}
         {stage === 'ajuste-nacimiento' && hairlineCorrected && hairlineSuggested && (
           <HairlineHandle
             position={hairlineCorrected}
@@ -462,10 +468,10 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
       {quality && (
         <div
           className={
-            'mt-4 w-full max-w-sm rounded-xl border px-4 py-3 text-sm ' +
+            'panel mt-4 w-full max-w-sm px-4 py-3 text-sm ' +
             (quality.ok
-              ? 'border-lime-500 bg-lime-950 text-lime-200'
-              : 'border-amber-500 bg-amber-950 text-amber-200')
+              ? 'border-select bg-select/15 text-ink'
+              : 'border-danger bg-danger-surface text-danger-ink')
           }
         >
           {quality.ok ? 'Calidad OK: la foto pasó el gate.' : quality.message}
@@ -474,16 +480,13 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
 
       {stage === 'ajuste-nacimiento' && (
         <>
-          <div className="mt-4 w-full max-w-sm rounded-xl border border-sky-500 bg-sky-950 px-4 py-3 text-sm text-sky-200">
-            Tocá cerca de la línea punteada y arrastrá hasta donde arranca de
-            verdad el pelo. Al tocar, la línea aparece un poco arriba de tu
-            dedo a propósito, para que no la tapes. El punto 10 del mesh es
-            solo una aproximación de la frente, no el nacimiento real.
+          <div className="panel mt-4 w-full max-w-sm border-select bg-select/15 px-4 py-3 text-sm text-ink">
+            Arrastrá la línea hasta donde arranca el pelo.
           </div>
           <button
             type="button"
             onClick={handleConfirmHairline}
-            className="mt-4 min-h-14 w-full max-w-sm rounded-xl bg-lime-400 px-6 text-lg font-semibold text-neutral-950 transition active:scale-[0.98]"
+            className="btn btn-primary mt-4 w-full max-w-sm text-lg"
           >
             Confirmar y ver ratios
           </button>
@@ -491,48 +494,48 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
       )}
 
       {config.mostrarDebug && debugInfo && (
-        <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-xs text-neutral-300">
-          <p className="mb-2 font-semibold text-neutral-100">Ratios crudos (debug)</p>
+        <div className="panel mt-4 w-full max-w-sm px-4 py-3 text-xs text-ink-muted">
+          <p className="mb-2 font-semibold text-ink">Ratios crudos (debug)</p>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
-            <dt className="text-neutral-500">Caras detectadas</dt>
+            <dt className="text-ink-muted">Caras detectadas</dt>
             <dd>{debugInfo.faceCount}</dd>
-            <dt className="text-neutral-500">Landmarks</dt>
+            <dt className="text-ink-muted">Landmarks</dt>
             <dd>{debugInfo.landmarkCount}</dd>
-            <dt className="text-neutral-500">Yaw</dt>
+            <dt className="text-ink-muted">Yaw</dt>
             <dd>{debugInfo.yawDeg.toFixed(1)}°</dd>
-            <dt className="text-neutral-500">Pitch</dt>
+            <dt className="text-ink-muted">Pitch</dt>
             <dd>{debugInfo.pitchDeg.toFixed(1)}°</dd>
-            <dt className="text-neutral-500">Roll</dt>
+            <dt className="text-ink-muted">Roll</dt>
             <dd>
               {debugInfo.rollDeg.toFixed(1)}°
               {debugInfo.rollCorrectedDeg !== null && ' (corregido)'}
             </dd>
-            <dt className="text-neutral-500">Alto de cara / imagen</dt>
+            <dt className="text-ink-muted">Alto de cara / imagen</dt>
             <dd>{(debugInfo.boundingBoxHeightFraction * 100).toFixed(0)}%</dd>
-            <dt className="text-neutral-500">Nitidez (var. laplaciano)</dt>
+            <dt className="text-ink-muted">Nitidez (var. laplaciano)</dt>
             <dd>{debugInfo.sharpness.toFixed(0)}</dd>
           </dl>
         </div>
       )}
 
       {config.mostrarDebug && hairlineSuggested && hairlineCorrected && (
-        <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-xs text-neutral-300">
-          <p className="mb-2 font-semibold text-neutral-100">
+        <div className="panel mt-4 w-full max-w-sm px-4 py-3 text-xs text-ink-muted">
+          <p className="mb-2 font-semibold text-ink">
             Calibración de nacimiento (debug)
           </p>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
-            <dt className="text-neutral-500">Sugerido (landmark 10)</dt>
+            <dt className="text-ink-muted">Sugerido (landmark 10)</dt>
             <dd>
               {hairlineSuggested.x.toFixed(3)}, {hairlineSuggested.y.toFixed(3)}
             </dd>
-            <dt className="text-neutral-500">Corregido por el barbero</dt>
+            <dt className="text-ink-muted">Corregido por el barbero</dt>
             <dd>
               {hairlineCorrected.x.toFixed(3)}, {hairlineCorrected.y.toFixed(3)}
             </dd>
-            <dt className="text-neutral-500">Delta vertical (calibración)</dt>
+            <dt className="text-ink-muted">Delta vertical (calibración)</dt>
             <dd>{(hairlineCorrected.y - hairlineSuggested.y).toFixed(3)}</dd>
           </dl>
-          <p className="mt-2 text-neutral-500">
+          <p className="mt-2 text-ink-muted">
             Este delta es el dato de calibración de la sección 2.3 (todavía no
             se envía a ningún lado: eso es Fase 7).
           </p>
@@ -540,32 +543,32 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
       )}
 
       {config.mostrarDebug && ratios && (
-        <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
-          <p className="mb-2 font-semibold text-neutral-100">Ratios faciales (R1-R6)</p>
+        <div className="panel mt-4 w-full max-w-sm px-4 py-3 text-sm text-ink">
+          <p className="mb-2 font-semibold text-ink">Ratios faciales (R1-R6)</p>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
-            <dt className="text-neutral-500">R1 · Largo / ancho cara</dt>
+            <dt className="text-ink-muted">R1 · Largo / ancho cara</dt>
             <dd>{ratios.r1.toFixed(2)}</dd>
-            <dt className="text-neutral-500">R2 · Frente / ancho cara</dt>
+            <dt className="text-ink-muted">R2 · Frente / ancho cara</dt>
             <dd>{ratios.r2.toFixed(2)}</dd>
-            <dt className="text-neutral-500">R3 · Mandíbula / ancho cara</dt>
+            <dt className="text-ink-muted">R3 · Mandíbula / ancho cara</dt>
             <dd>{ratios.r3.toFixed(2)}</dd>
-            <dt className="text-neutral-500">R4 · Ángulo mandibular</dt>
+            <dt className="text-ink-muted">R4 · Ángulo mandibular</dt>
             <dd>{ratios.r4.toFixed(0)}°</dd>
-            <dt className="text-neutral-500">R5 · Altura de frente</dt>
+            <dt className="text-ink-muted">R5 · Altura de frente</dt>
             <dd>{ratios.r5.toFixed(2)}</dd>
           </dl>
-          <p className="mb-1 mt-3 text-neutral-500">R6 · Tercios faciales</p>
+          <p className="mb-1 mt-3 text-ink-muted">R6 · Tercios faciales</p>
           <dl className="grid grid-cols-3 gap-x-2 text-center">
             <div>
-              <dt className="text-neutral-500">Frente</dt>
+              <dt className="text-ink-muted">Frente</dt>
               <dd>{(ratios.r6.frente * 100).toFixed(0)}%</dd>
             </div>
             <div>
-              <dt className="text-neutral-500">Nariz</dt>
+              <dt className="text-ink-muted">Nariz</dt>
               <dd>{(ratios.r6.nariz * 100).toFixed(0)}%</dd>
             </div>
             <div>
-              <dt className="text-neutral-500">Mentón</dt>
+              <dt className="text-ink-muted">Mentón</dt>
               <dd>{(ratios.r6.menton * 100).toFixed(0)}%</dd>
             </div>
           </dl>
@@ -573,76 +576,65 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
       )}
 
       {ratios && faceShapeClassification && faceShapeCorrected && (
-        <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
-          <p className="mb-1 font-semibold text-neutral-100">Forma de cara (sugerencia)</p>
+        <div className="panel mt-4 w-full max-w-sm px-4 py-3 text-sm text-ink">
+          <p className="mb-1 font-semibold text-ink">Forma de cara (sugerencia)</p>
           {/* Nunca una etiqueta sola con seguridad falsa (secciones 3 y 12):
               siempre se muestran las dos formas con más puntaje y su % de
               confianza, nunca solo la primera. */}
           <div className="mt-2 flex items-baseline gap-2">
-            <span className="text-lg font-semibold text-lime-400">
+            <span className="text-lg font-semibold text-accent-ink">
               {FACE_SHAPE_LABELS[faceShapeClassification.top1.shape]}{' '}
               {Math.round(faceShapeClassification.top1.confidence * 100)}%
             </span>
-            <span className="text-sm text-neutral-500">
+            <span className="text-sm text-ink-muted">
               / {FACE_SHAPE_LABELS[faceShapeClassification.top2.shape]}{' '}
               {Math.round(faceShapeClassification.top2.confidence * 100)}%
             </span>
           </div>
-          <p className="mt-2 text-xs text-neutral-400">
+          <p className="mt-2 text-xs text-ink-muted">
             {explainFaceShape(faceShapeClassification, ratios)}
           </p>
 
-          <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+          <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-ink-muted">
             ¿No es esa la forma? Tocá la que le pinta más
           </p>
           <div className="flex flex-wrap gap-2">
-            {FACE_SHAPES.map((shape) => {
-              const selected = faceShapeCorrected === shape
-              return (
-                <button
-                  key={shape}
-                  type="button"
-                  onClick={() => handleFaceShapeOverride(shape)}
-                  aria-pressed={selected}
-                  className={
-                    'min-h-14 rounded-xl border px-4 text-sm font-semibold transition active:scale-[0.98] ' +
-                    (selected
-                      ? 'border-lime-400 bg-lime-400 text-neutral-950'
-                      : 'border-neutral-700 bg-neutral-800 text-neutral-200')
-                  }
-                >
-                  {FACE_SHAPE_LABELS[shape]}
-                </button>
-              )
-            })}
+            {FACE_SHAPES.map((shape) => (
+              <Chip
+                key={shape}
+                label={FACE_SHAPE_LABELS[shape]}
+                selected={faceShapeCorrected === shape}
+                onClick={() => handleFaceShapeOverride(shape)}
+              />
+            ))}
           </div>
         </div>
       )}
 
       {config.mostrarDebug && faceShapeClassification && faceShapeSuggested && faceShapeCorrected && (
-        <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-xs text-neutral-300">
-          <p className="mb-2 font-semibold text-neutral-100">Forma de cara (debug)</p>
+        <div className="panel mt-4 w-full max-w-sm px-4 py-3 text-xs text-ink-muted">
+          <p className="mb-2 font-semibold text-ink">Forma de cara (debug)</p>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
-            <dt className="text-neutral-500">Sugerida (algoritmo)</dt>
+            <dt className="text-ink-muted">Sugerida (algoritmo)</dt>
             <dd>{FACE_SHAPE_LABELS[faceShapeSuggested]}</dd>
-            <dt className="text-neutral-500">Corregida por el barbero</dt>
+            <dt className="text-ink-muted">Corregida por el barbero</dt>
             <dd>
               {FACE_SHAPE_LABELS[faceShapeCorrected]}
               {faceShapeCorrected !== faceShapeSuggested && ' (corregida)'}
             </dd>
           </dl>
-          <p className="mb-1 mt-3 text-neutral-500">Puntaje crudo de las 7 formas</p>
+          <p className="mb-1 mt-3 text-ink-muted">Puntaje crudo de las 7 formas</p>
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
             {faceShapeClassification.scores.map((score) => (
               <Fragment key={score.shape}>
-                <dt className="text-neutral-500">{FACE_SHAPE_LABELS[score.shape]}</dt>
+                <dt className="text-ink-muted">{FACE_SHAPE_LABELS[score.shape]}</dt>
                 <dd>
                   {(score.confidence * 100).toFixed(0)}% (raw {score.rawScore.toFixed(2)})
                 </dd>
               </Fragment>
             ))}
           </dl>
-          <p className="mt-2 text-neutral-500">
+          <p className="mt-2 text-ink-muted">
             Igual que con el nacimiento del pelo: si el barbero corrige acá, es
             oro puro para calibrar (2.3), pero todavía no se envía ni persiste
             (eso es Fase 7).
@@ -651,11 +643,11 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
       )}
 
       {config.mostrarDebug && (
-        <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-xs text-neutral-400">
-          <p className="mb-2 font-semibold text-neutral-100">Referencia de colores del overlay</p>
+        <div className="panel mt-4 w-full max-w-sm px-4 py-3 text-xs text-ink-muted">
+          <p className="mb-2 font-semibold text-ink">Referencia de colores del overlay</p>
           <ul className="space-y-1">
             <li className="flex items-center gap-2">
-              <span className="inline-block h-3 w-3 rounded-full bg-lime-400" />
+              <span className="inline-block h-3 w-3 rounded-full bg-ink" />
               Malla completa (478 puntos)
             </li>
             {DEBUG_HIGHLIGHT_GROUPS.map((group) => (
@@ -773,7 +765,7 @@ function HairlineHandle({ position, lockedX, canvas, onChange }: HairlineHandleP
         style={{ top: `${position.y * 100}%`, height: `${HAIRLINE_GRAB_ZONE_HEIGHT_PX}px` }}
       />
       <div
-        className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed border-lime-400"
+        className="pointer-events-none absolute inset-x-0 z-10 border-t-2 border-dashed border-accent"
         style={{ top: `${position.y * 100}%` }}
       />
     </>

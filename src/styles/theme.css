@@ -1,0 +1,178 @@
+/*
+ * Sistema de diseño de Visagio — ÚNICO archivo de tema.
+ * =====================================================
+ *
+ * Toda la paleta y la tipografía viven acá. Para cambiar de estilo (probar
+ * otra dirección visual, ajustar un color) se edita SOLO este archivo: el
+ * resto de la app no usa colores crudos de Tailwind (`neutral-950`, `lime-400`),
+ * usa los tokens semánticos de abajo (`bg-app`, `text-ink`, `bg-accent`, …) y
+ * las clases de componente (`.btn-primary`, `.chip`, `.panel`).
+ *
+ * Dirección activa: A — "Barbería" (carbón + latón).
+ * Al pie del bloque `@theme` quedan comentadas las direcciones B (Navy) y
+ * C (dark refinado) por si se quiere volver: se pisan los mismos tokens.
+ *
+ * Tailwind v4: cada `--color-*` de `@theme` genera utilidades `bg-*`, `text-*`,
+ * `border-*` con ese nombre (ej. `--color-ink` → `text-ink`, `bg-ink`).
+ */
+
+@theme {
+  /* ---- Dirección A: Barbería (carbón + latón) ---- */
+
+  /* Superficies */
+  --color-app: #17140f; /* fondo de la app */
+  --color-surface: #211b12; /* panel / card */
+  --color-surface-2: #2c2318; /* chip sin seleccionar / panel elevado */
+  --color-line: #3a3020; /* bordes sutiles */
+
+  /* Texto */
+  --color-ink: #f5efe4; /* primario (crema) */
+  --color-ink-muted: #b8ae9c; /* secundario — reemplaza al viejo neutral-500 */
+  --color-ink-faint: #8a8172; /* terciario, usar poco */
+
+  /* Acción primaria (latón) */
+  --color-accent: #c8952f; /* fill del botón primario */
+  --color-accent-strong: #b5842a; /* hover / press */
+  --color-accent-ink: #e0b25a; /* latón como TEXTO sobre fondo oscuro (≥4.5:1) */
+  --color-on-accent: #17140f; /* texto sobre el botón latón */
+
+  /* Estado seleccionado (verde profundo) — distinto de la acción, a propósito */
+  --color-select: #3a6b5e;
+  --color-on-select: #f5efe4;
+
+  /* Peligro (rojo barbero) */
+  --color-danger: #c0442e;
+  --color-danger-strong: #a5391f;
+  --color-danger-ink: #e2795f; /* rojo como texto sobre fondo oscuro */
+  --color-danger-surface: #2a1512;
+
+  /* Tipografía */
+  --font-display: 'Oswald Variable', 'Oswald', system-ui, sans-serif;
+  --font-body: 'Inter Variable', 'Inter', system-ui, sans-serif;
+
+  /*
+   * ---- Dirección B: Navy barbershop (para volver, pisar los de arriba) ----
+   * --color-app: #0e1a24;  --color-surface: #14232f;  --color-surface-2: #1b2e3c;
+   * --color-line: #24384a; --color-ink: #ede8df; --color-ink-muted: #9fb0bd;
+   * --color-accent: #e0a73b; --color-accent-strong: #c9922e; --color-accent-ink: #f0c069;
+   * --color-on-accent: #0e1a24; --color-select: #2e8c8c; --color-danger: #d34b3e;
+   *
+   * ---- Dirección C: dark refinado ----
+   * --color-app: #0a0a0a;  --color-surface: #171717;  --color-surface-2: #262626;
+   * --color-line: #333333; --color-ink: #fafafa; --color-ink-muted: #a3a3a3;
+   * --color-accent: #e0a73b; --color-select: #2e8c8c; --color-danger: #dc2626;
+   */
+}
+
+/* Base ------------------------------------------------------------------- */
+
+body {
+  background-color: var(--color-app);
+  color: var(--color-ink);
+  font-family: var(--font-body);
+}
+
+/* El display (Oswald) es condensado tipo cartel de barbería: se usa en
+   títulos y nombres de corte, nunca para texto largo. */
+.font-display {
+  font-family: var(--font-display);
+}
+
+/* Componentes ------------------------------------------------------------ */
+
+@layer components {
+  /* Panel / card estándar */
+  .panel {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    border-radius: 0.75rem;
+  }
+
+  /* Botones. Base común + variantes. Target mínimo 56px (min-h-14 = 3.5rem),
+     alcanzable con el pulgar (CLAUDE.md 10). */
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 3.5rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    border-radius: 0.75rem;
+    font-family: var(--font-body);
+    font-weight: 600;
+    line-height: 1.1;
+    transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease;
+  }
+  .btn:active {
+    transform: scale(0.98);
+  }
+  .btn:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .btn:disabled {
+    opacity: 0.4;
+  }
+
+  .btn-primary {
+    background-color: var(--color-accent);
+    color: var(--color-on-accent);
+  }
+  .btn-primary:not(:disabled):hover {
+    background-color: var(--color-accent-strong);
+  }
+
+  .btn-secondary {
+    background-color: var(--color-surface);
+    border: 1px solid var(--color-line);
+    color: var(--color-ink);
+  }
+  .btn-secondary:not(:disabled):hover {
+    border-color: var(--color-accent);
+  }
+
+  .btn-danger {
+    background-color: transparent;
+    border: 1px solid var(--color-danger);
+    color: var(--color-danger-ink);
+  }
+  .btn-danger:not(:disabled):hover {
+    background-color: var(--color-danger-surface);
+  }
+
+  .btn-danger-solid {
+    background-color: var(--color-danger);
+    color: #fff;
+  }
+  .btn-danger-solid:not(:disabled):hover {
+    background-color: var(--color-danger-strong);
+  }
+
+  /* Chip grande, seleccionable con el pulgar (CLAUDE.md 7.7 / 10). Seleccionado
+     = verde profundo, distinto del latón de acción a propósito. */
+  .chip {
+    min-height: 3.5rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    border-radius: 0.75rem;
+    border: 1px solid var(--color-line);
+    background-color: var(--color-surface-2);
+    color: var(--color-ink);
+    font-family: var(--font-body);
+    font-size: 0.875rem;
+    font-weight: 600;
+    transition: transform 150ms ease, background-color 150ms ease, border-color 150ms ease;
+  }
+  .chip:active {
+    transform: scale(0.98);
+  }
+  .chip:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+  .chip[aria-pressed='true'] {
+    background-color: var(--color-select);
+    border-color: var(--color-select);
+    color: var(--color-on-select);
+  }
+}

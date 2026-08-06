@@ -84,55 +84,51 @@ export function DatosPrivacidadScreen({ onBack }: DatosPrivacidadScreenProps) {
   }
 
   return (
-    <div className="flex min-h-svh flex-col items-center bg-neutral-950 px-4 pb-16 pt-8 text-neutral-50">
+    <div className="flex min-h-svh flex-col items-center bg-app px-4 pb-16 pt-8 text-ink">
       <div className="flex w-full max-w-sm items-center">
-        <button type="button" onClick={onBack} className="min-h-14 px-2 text-sm font-semibold text-neutral-300">
+        <button type="button" onClick={onBack} className="min-h-14 px-2 text-sm font-semibold text-ink-muted">
           ← Volver
         </button>
       </div>
 
-      <h1 className="mt-2 w-full max-w-sm text-2xl font-semibold tracking-tight">Datos y privacidad</h1>
-      <p className="mt-1 w-full max-w-sm text-sm text-neutral-400">
+      <h1 className="mt-2 w-full max-w-sm font-display text-2xl font-semibold text-ink">Datos y privacidad</h1>
+      <p className="mt-1 w-full max-w-sm text-sm text-ink-muted">
         Todo lo que la app guarda en este teléfono, con acceso para exportarlo o borrarlo cuando quieras.
       </p>
 
-      <div className="mt-6 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
-        <p className="mb-2 font-semibold text-neutral-100">Guardado en este teléfono</p>
+      <div className="panel mt-6 w-full max-w-sm px-4 py-3 text-sm text-ink">
+        <p className="mb-2 font-semibold text-ink">Guardado en este teléfono</p>
         <dl className="grid grid-cols-[1fr_auto] gap-y-1">
-          <dt className="text-neutral-400">Fichas de cliente</dt>
-          <dd className="text-right font-semibold">{fichasCount ?? '…'}</dd>
-          <dt className="text-neutral-400">Eventos de feedback</dt>
-          <dd className="text-right font-semibold">{eventosCount ?? '…'}</dd>
+          <dt className="text-ink-muted">Fichas de cliente</dt>
+          <dd className="text-right font-semibold text-ink">{fichasCount ?? '…'}</dd>
+          <dt className="text-ink-muted">Eventos de feedback</dt>
+          <dd className="text-right font-semibold text-ink">{eventosCount ?? '…'}</dd>
         </dl>
-        {countError && <p className="mt-2 text-xs text-red-300">{countError}</p>}
+        {countError && <p className="mt-2 text-xs text-danger-ink">{countError}</p>}
       </div>
 
-      <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3">
-        <p className="text-sm font-semibold text-neutral-100">Exportar todo</p>
-        <p className="mt-1 text-xs text-neutral-500">
+      <div className="panel mt-4 w-full max-w-sm px-4 py-3">
+        <p className="text-sm font-semibold text-ink">Exportar todo</p>
+        <p className="mt-1 text-xs text-ink-muted">
           Baja un archivo con las fichas de cliente y los eventos de feedback, para guardarlo en Drive o mandárselo
           al desarrollador.
         </p>
-        <button
-          type="button"
-          onClick={handleExportar}
-          className="mt-3 min-h-14 w-full rounded-xl bg-lime-400 px-6 text-base font-semibold text-neutral-950 transition active:scale-[0.98]"
-        >
+        <button type="button" onClick={handleExportar} className="btn btn-primary mt-3 w-full">
           Exportar todo
         </button>
-        {exportError && <p className="mt-2 text-xs text-red-300">{exportError}</p>}
+        {exportError && <p className="mt-2 text-xs text-danger-ink">{exportError}</p>}
       </div>
 
-      <div className="mt-4 w-full max-w-sm rounded-xl border border-red-900 bg-neutral-900 px-4 py-3">
-        <p className="text-sm font-semibold text-neutral-100">Borrar todo</p>
-        <p className="mt-1 text-xs text-neutral-500">
+      <div className="mt-4 w-full max-w-sm rounded-xl border border-danger bg-danger-surface/40 px-4 py-3">
+        <p className="text-sm font-semibold text-ink">Borrar todo</p>
+        <p className="mt-1 text-xs text-ink-muted">
           Borra todas las fichas de cliente y los eventos de feedback de este teléfono. No se puede deshacer —
           exportá antes si no tenés respaldo.
         </p>
 
         {borrarState !== 'idle' ? (
-          <div className="mt-3 rounded-xl border border-red-700 bg-red-950 px-4 py-3">
-            <p className="text-sm font-semibold text-red-200">
+          <div className="mt-3 rounded-xl border border-danger bg-danger-surface px-4 py-3">
+            <p className="text-sm font-semibold text-danger-ink">
               ¿Seguro que querés borrar TODAS las fichas y todos los eventos de feedback? Esta acción no se puede
               deshacer.
             </p>
@@ -141,7 +137,7 @@ export function DatosPrivacidadScreen({ onBack }: DatosPrivacidadScreenProps) {
                 type="button"
                 onClick={() => setBorrarState('idle')}
                 disabled={borrarState === 'borrando'}
-                className="min-h-14 flex-1 rounded-xl border border-neutral-700 px-4 text-sm font-semibold text-neutral-300 disabled:opacity-50"
+                className="btn btn-secondary flex-1 disabled:opacity-50"
               >
                 Cancelar
               </button>
@@ -149,7 +145,7 @@ export function DatosPrivacidadScreen({ onBack }: DatosPrivacidadScreenProps) {
                 type="button"
                 onClick={handleConfirmarBorrado}
                 disabled={borrarState === 'borrando'}
-                className="min-h-14 flex-1 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white transition active:scale-[0.98] disabled:opacity-60"
+                className="btn btn-danger-solid flex-1 disabled:opacity-60"
               >
                 {borrarState === 'borrando' ? 'Borrando…' : 'Sí, borrar todo'}
               </button>
@@ -159,12 +155,12 @@ export function DatosPrivacidadScreen({ onBack }: DatosPrivacidadScreenProps) {
           <button
             type="button"
             onClick={() => setBorrarState('confirmando')}
-            className="mt-3 min-h-14 w-full rounded-xl border border-red-700 px-6 text-base font-semibold text-red-400 transition active:scale-[0.98]"
+            className="btn btn-danger mt-3 w-full"
           >
             Borrar todo
           </button>
         )}
-        {borrarError && <p className="mt-2 text-xs text-red-300">{borrarError}</p>}
+        {borrarError && <p className="mt-2 text-xs text-danger-ink">{borrarError}</p>}
       </div>
 
       <VersionFooter />

@@ -17,13 +17,11 @@
 
 import type { AppConfig, CutRecommendation } from '../types'
 
-/** Contenido ya armado de la ficha compartible: nombre, spec en texto plano, mantenimiento, producto/peinado y marca (sección 2.2). */
+/** Contenido ya armado de la ficha compartible: nombre, mantenimiento, producto/peinado y marca (sección 2.2). Solo lo que le sirve al CLIENTE — la spec técnica de máquina es lenguaje del barbero y queda en el Detalle de la app, no en esta ficha (CLAUDE.md 2.2, decisión revisada). */
 export interface ShareCardContent {
   readonly nombreCorte: string
   /** Ruta a la imagen de maniquí 3/4 (sección 15), la misma que ya se usa en la card y el detalle. */
   readonly imagen: string
-  /** Spec técnica en texto plano, una línea por zona (costados/arriba/nuca/contorno), tal como la pide la sección 2.2. */
-  readonly specLineas: readonly string[]
   /** "Cada cuánto volver", en una frase ya armada. */
   readonly mantenimiento: string
   /** Producto sugerido + cuánto tarda en peinarse, en una frase ya armada. */
@@ -38,12 +36,6 @@ export function buildShareCardContent(recommendation: CutRecommendation, config:
   return {
     nombreCorte: cut.nombre,
     imagen: cut.imagenes.tresCuartos,
-    specLineas: [
-      `Costados: ${cut.spec.costados}`,
-      `Arriba: ${cut.spec.arriba}`,
-      `Nuca: ${cut.spec.nuca}`,
-      `Contorno: ${cut.spec.contorno}`,
-    ],
     mantenimiento: buildMantenimientoLinea(cut.mantenimientoSemanas),
     peinado: buildPeinadoLinea(cut.producto, cut.minutosDePeinado),
     nombreBarberia: config.nombreBarberia,

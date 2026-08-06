@@ -166,14 +166,18 @@ export function ResultsScreen({
   const filtered = results.recommendations.filter((r) => lengthFilter === 'todos' || r.cut.longitud === lengthFilter)
   const top = filtered.slice(0, RESULTS_TOP_N)
   const lengthOptions: readonly (CutLength | 'todos')[] = ['todos', ...CUT_LENGTHS]
+  // Score máximo de la lista MOSTRADA (post-filtro), no del ranking completo:
+  // la barra de match de cada card es relativa a lo que el barbero está viendo
+  // ahora, no a un top-1 que puede haber quedado afuera del filtro de longitud.
+  const maxScore = top.length > 0 ? top[0].score : 0
 
   return (
-    <div className="flex min-h-svh flex-col items-center bg-neutral-950 px-4 pb-20 pt-8 text-neutral-50">
+    <div className="flex min-h-svh flex-col items-center bg-app px-4 pb-8 pt-8 text-ink">
       <div className="flex w-full max-w-sm items-center justify-between">
-        <button type="button" onClick={onBack} className="min-h-14 px-2 text-sm font-semibold text-neutral-300">
+        <button type="button" onClick={onBack} className="min-h-14 px-2 text-sm font-semibold text-ink-muted">
           ← Volver
         </button>
-        <h1 className="text-xl font-semibold">Resultados</h1>
+        <h1 className="font-display text-xl font-semibold uppercase tracking-wide text-ink">Resultados</h1>
         <span className="w-14" aria-hidden />
       </div>
 
@@ -187,12 +191,7 @@ export function ResultsScreen({
               type="button"
               onClick={() => onLengthFilterChange(option)}
               aria-pressed={isSelected}
-              className={
-                'min-h-14 flex-1 rounded-xl border px-2 text-sm font-semibold transition active:scale-[0.98] ' +
-                (isSelected
-                  ? 'border-lime-400 bg-lime-400 text-neutral-950'
-                  : 'border-neutral-700 bg-neutral-800 text-neutral-200')
-              }
+              className="chip flex-1"
             >
               {option === 'todos' ? 'Todos' : CUT_LENGTH_LABELS[option]}
             </button>
@@ -201,19 +200,21 @@ export function ResultsScreen({
       </div>
 
       {top.length === 0 && (
-        <p className="mt-8 max-w-sm text-center text-sm text-neutral-400">
+        <p className="mt-8 max-w-sm text-center text-sm text-ink-muted">
           Ningún corte de esta longitud en el ranking. Probá con otro filtro.
         </p>
       )}
 
       <div className="mt-4 flex w-full max-w-sm flex-col gap-3">
-        {top.map((recommendation) => (
+        {top.map((recommendation, index) => (
           <CutCard
             key={recommendation.cut.id}
             recommendation={recommendation}
             faceShape={results.faceShape}
             ratios={results.ratios}
             barberInput={results.barberInput}
+            rank={index + 1}
+            maxScore={maxScore}
             onOpen={() => onSelect(recommendation)}
           />
         ))}
@@ -229,37 +230,62 @@ interface CutCardProps {
   readonly faceShape: FaceShapeClassification
   readonly ratios: FaceRatios
   readonly barberInput: BarberInput
+  /** Posición en la lista MOSTRADA (1-based): el `#1` es el destacado, el resto se numera discreto. */
+  readonly rank: number
+  /** Score del corte en el puesto 1 de la lista mostrada, para normalizar la barra de match de ESTA card (nunca un porcentaje: sería falsa precisión, CLAUDE.md 3/12). */
+  readonly maxScore: number
   readonly onOpen: () => void
 }
 
-/** Card de un corte recomendado: nombre, maniquí, y la línea de "porqué" de `explain.ts` (sección 9: "sin explicación el barbero no lo puede usar delante del cliente"). */
-function CutCard({ recommendation, faceShape, ratios, barberInput, onOpen }: CutCardProps) {
-  const { cut, caminoEnVariosCortes } = recommendation
+/** Card de un corte recomendado: nombre, maniquí, y la línea de "porqué" de `explain.ts` (sección 9: "sin explicación el barbero no lo puede usar delante del cliente"). El top-1 se destaca con acento latón para que salte a la vista sin leer (hallazgo #1). */
+function CutCard({ recommendation, faceShape, ratios, barberInput, rank, maxScore, onOpen }: CutCardProps) {
+  const { cut, caminoEnVariosCortes, score } = recommendation
   const why = explainRecommendation(recommendation, faceShape, ratios, barberInput)
+  const isTop = rank === 1
+  // Ancho relativo de la barra de match: score de esta card / score del top-1
+  // de la lista mostrada, clampeado a [0,1]. Sin barra si el top-1 no punteó
+  // (caso raro, evita dividir por 0 o negativos).
+  const matchWidthPct = maxScore > 0 ? Math.max(0, Math.min(1, score / maxScore)) * 100 : null
 
   return (
     <button
       type="button"
       onClick={onOpen}
-      className="flex min-h-24 items-center gap-3 rounded-xl border border-neutral-800 bg-neutral-900 p-3 text-left transition active:scale-[0.98]"
+      className={
+        'flex min-h-24 items-center gap-3 rounded-xl p-3 text-left transition active:scale-[0.98] ' +
+        (isTop ? 'border-2 border-accent bg-surface' : 'border border-line bg-surface')
+      }
     >
       <img
         src={cut.imagenes.tresCuartos}
         alt=""
-        className="h-16 w-16 flex-shrink-0 rounded-lg bg-neutral-800 object-contain"
+        className="h-16 w-16 flex-shrink-0 rounded-lg bg-surface-2 object-contain"
       />
       <div className="min-w-0 flex-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold text-neutral-50">{cut.nombre}</span>
-          {!cut.verificado && (
-            <span className="rounded-full border border-amber-500 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-400">
-              Sin verificar
+          {isTop ? (
+            <span className="font-display text-xs font-semibold uppercase tracking-wide text-accent-ink">
+              Recomendado
             </span>
+          ) : (
+            <span className="text-xs font-semibold text-ink-faint">#{rank}</span>
+          )}
+          {!cut.verificado && (
+            <span className="text-[10px] font-medium uppercase tracking-wide text-ink-faint">Sin verificar</span>
           )}
         </div>
-        <p className="mt-1 text-xs text-neutral-400">{why}</p>
+        <p className="mt-0.5 font-display text-base font-semibold text-ink">{cut.nombre}</p>
+        {matchWidthPct !== null && (
+          <div className="mt-1.5 h-1 w-full max-w-[7rem] overflow-hidden rounded-full bg-surface-2" aria-hidden>
+            <div
+              className={isTop ? 'h-full rounded-full bg-accent' : 'h-full rounded-full bg-ink-faint'}
+              style={{ width: `${matchWidthPct}%` }}
+            />
+          </div>
+        )}
+        <p className="mt-1 text-xs text-ink-muted">{why}</p>
         {caminoEnVariosCortes && (
-          <p className="mt-1 text-xs font-medium text-sky-400">
+          <p className="mt-1 text-xs font-medium text-accent-ink">
             Con el largo actual no todavía, pero es un buen camino en 2-3 cortes
           </p>
         )}
@@ -317,6 +343,27 @@ type GuardarFichaState =
   | { readonly status: 'guardando' }
   | { readonly status: 'guardado'; readonly alias: string }
   | { readonly status: 'error'; readonly message: string }
+
+/** Ícono de "pulgar abajo" para el botón de descarte (reemplaza el emoji 👎: un emoji como ícono renderiza distinto según el sistema operativo — no es la letra chica del oficio, es un anti-patrón de UI). Path de Lucide `thumbs-down`, inline para no sumar una dependencia nueva por un solo ícono. */
+function ThumbsDownIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      aria-hidden="true"
+    >
+      <path d="M17 14V2" />
+      <path d="M9 18.12 10 14H4.17a2 2 0 0 1-1.92-2.56l2.33-8A2 2 0 0 1 6.5 2H20a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-2.76a2 2 0 0 0-1.79 1.11L12 22h0a3.13 3.13 0 0 1-3-3.88Z" />
+    </svg>
+  )
+}
 
 /** Etiquetas de los chips de motivo de descarte (👎), EXACTOS de la sección 2.3 — nunca texto libre. */
 const DESCARTE_MOTIVO_LABELS: Record<DescarteMotivo, string> = {
@@ -444,6 +491,14 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
           corteNombre: cut.nombre,
           spec: cut.spec,
         },
+        // Fase G: el form recién confirmado precarga "Ajustar" la próxima
+        // vez que este cliente vuelva (`BuscarClienteScreen.openFicha`).
+        ultimoForm: {
+          textura: results.barberInput.textura,
+          densidad: results.barberInput.densidad,
+          minutosDeclarados: results.barberInput.minutosDeclarados,
+          largoActualArriba: results.barberInput.largoActualArriba,
+        },
       })
       await registrarFeedbackDeEsteHice()
 
@@ -461,12 +516,29 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
     if (guardarFichaTarget.kind !== 'existente') return
     setGuardarState({ status: 'guardando' })
     try {
-      const updated = await agregarHistorial(guardarFichaTarget.fichaId, {
-        fecha: new Date().toISOString(),
-        corteId: cut.id,
-        corteNombre: cut.nombre,
-        spec: cut.spec,
-      })
+      // `results` es `null` en el camino "Repetir el último" (ver
+      // `CutDetailScreenProps.results`): ahí no hay `BarberInput` de esta
+      // visita porque no se tocó el form, así que no hay `ultimoForm` que
+      // actualizar (Fase G: `agregarHistorial` deja el que ya tenía la
+      // ficha tal cual cuando se omite este argumento). En "Ajustar" sí hay
+      // `results` con el form recién confirmado.
+      const updated = await agregarHistorial(
+        guardarFichaTarget.fichaId,
+        {
+          fecha: new Date().toISOString(),
+          corteId: cut.id,
+          corteNombre: cut.nombre,
+          spec: cut.spec,
+        },
+        results
+          ? {
+              textura: results.barberInput.textura,
+              densidad: results.barberInput.densidad,
+              minutosDeclarados: results.barberInput.minutosDeclarados,
+              largoActualArriba: results.barberInput.largoActualArriba,
+            }
+          : undefined,
+      )
       if (!updated) {
         setGuardarState({ status: 'error', message: 'No se encontró la ficha. Puede que se haya borrado.' })
         return
@@ -497,21 +569,21 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
   }
 
   return (
-    <div className="flex min-h-svh flex-col items-center bg-neutral-950 px-4 pb-20 pt-8 text-neutral-50">
+    <div className="flex min-h-svh flex-col items-center bg-app px-4 pb-8 pt-8 text-ink">
       <div className="flex w-full max-w-sm items-center">
-        <button type="button" onClick={onBack} className="min-h-14 px-2 text-sm font-semibold text-neutral-300">
+        <button type="button" onClick={onBack} className="min-h-14 px-2 text-sm font-semibold text-ink-muted">
           ← Volver
         </button>
       </div>
 
-      <h1 className="mt-2 w-full max-w-sm text-2xl font-semibold">{cut.nombre}</h1>
+      <h1 className="mt-2 w-full max-w-sm font-display text-2xl font-semibold text-ink">{cut.nombre}</h1>
       {!cut.verificado && (
-        <p className="mt-1 w-full max-w-sm text-xs font-medium uppercase tracking-wide text-amber-400">
+        <p className="mt-1 w-full max-w-sm text-[11px] font-medium uppercase tracking-wide text-ink-faint">
           Dato sin verificar todavía — a confirmar con el barbero
         </p>
       )}
       {caminoEnVariosCortes && (
-        <div className="mt-3 w-full max-w-sm rounded-xl border border-sky-500 bg-sky-950 px-4 py-3 text-sm text-sky-200">
+        <div className="mt-3 w-full max-w-sm rounded-xl border border-accent bg-surface px-4 py-3 text-sm text-accent-ink">
           Con el largo actual no todavía, pero es un buen camino en 2-3 cortes.
         </div>
       )}
@@ -519,25 +591,28 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
       <img
         src={cut.imagenes.tresCuartos}
         alt=""
-        className="mt-4 h-40 w-40 rounded-xl bg-neutral-900 object-contain"
+        className="mt-4 h-40 w-40 rounded-xl bg-surface object-contain"
       />
 
-      <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
-        <p className="mb-2 font-semibold text-neutral-100">Spec técnica</p>
+      {/* Spec técnica: lo que el barbero necesita YA para cortar (hallazgo #8). Se destaca con acento sobre Pasos/Cuidados, que son paneles secundarios normales. */}
+      <div className="mt-4 w-full max-w-sm rounded-xl border-2 border-accent bg-surface px-4 py-3 text-sm text-ink">
+        <p className="mb-2 font-display text-base font-semibold uppercase tracking-wide text-accent-ink">
+          Spec técnica
+        </p>
         <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-          <dt className="text-neutral-500">Costados</dt>
+          <dt className="text-ink-muted">Costados</dt>
           <dd>{cut.spec.costados}</dd>
-          <dt className="text-neutral-500">Arriba</dt>
+          <dt className="text-ink-muted">Arriba</dt>
           <dd>{cut.spec.arriba}</dd>
-          <dt className="text-neutral-500">Nuca</dt>
+          <dt className="text-ink-muted">Nuca</dt>
           <dd>{cut.spec.nuca}</dd>
-          <dt className="text-neutral-500">Contorno</dt>
+          <dt className="text-ink-muted">Contorno</dt>
           <dd>{cut.spec.contorno}</dd>
         </dl>
       </div>
 
-      <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
-        <p className="mb-2 font-semibold text-neutral-100">Pasos</p>
+      <div className="panel mt-4 w-full max-w-sm px-4 py-3 text-sm text-ink">
+        <p className="mb-2 font-semibold text-ink">Pasos</p>
         <ol className="list-decimal space-y-1 pl-4">
           {cut.pasos.map((paso) => (
             <li key={paso}>{paso}</li>
@@ -545,14 +620,14 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
         </ol>
       </div>
 
-      <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
-        <p className="mb-2 font-semibold text-neutral-100">Cuidados</p>
+      <div className="panel mt-4 w-full max-w-sm px-4 py-3 text-sm text-ink">
+        <p className="mb-2 font-semibold text-ink">Cuidados</p>
         <ul className="list-disc space-y-1 pl-4">
           {cut.cuidados.map((cuidado) => (
             <li key={cuidado}>{cuidado}</li>
           ))}
         </ul>
-        <p className="mt-3 text-xs text-neutral-500">
+        <p className="mt-3 text-xs text-ink-muted">
           Mantenimiento: cada {cut.mantenimientoSemanas} semanas. Dificultad {cut.dificultad}/5, ~
           {cut.tiempoEjecucionMin} min de sillón.
         </p>
@@ -563,50 +638,39 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
           type="button"
           onClick={handleShareClick}
           disabled={shareState.status === 'generando'}
-          className="min-h-14 w-full rounded-xl bg-lime-400 px-6 text-base font-semibold text-neutral-950 transition active:scale-[0.98] disabled:opacity-60"
+          className="btn btn-primary w-full"
         >
           {shareState.status === 'generando' ? 'Armando la ficha…' : 'Compartir al cliente'}
         </button>
 
         {shareState.status === 'fallback' && (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
+          <div className="panel px-4 py-3 text-sm text-ink">
             <p>Guardá la imagen y mandala por WhatsApp.</p>
-            <a
-              href={shareState.url}
-              download="corte.png"
-              className="mt-2 flex min-h-14 items-center justify-center rounded-xl border border-lime-400 px-4 text-sm font-semibold text-lime-400"
-            >
+            <a href={shareState.url} download="corte.png" className="btn btn-secondary mt-2 w-full">
               Descargar imagen
             </a>
           </div>
         )}
 
         {shareState.status === 'error' && (
-          <p className="rounded-xl border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-200">
+          <p className="rounded-xl border border-danger bg-danger-surface px-4 py-3 text-sm text-danger-ink">
             {shareState.message}
           </p>
         )}
 
         {guardarState.status === 'guardado' ? (
-          <div className="rounded-xl border border-lime-500 bg-lime-950 px-4 py-3 text-sm text-lime-200">
+          <div className="rounded-xl border border-select bg-surface px-4 py-3 text-sm text-ink">
             <p>Guardado en la ficha de {guardarState.alias}.</p>
-            <button
-              type="button"
-              onClick={onExit}
-              className="mt-2 flex min-h-14 w-full items-center justify-center rounded-xl border border-lime-400 px-4 text-sm font-semibold text-lime-400"
-            >
+            <button type="button" onClick={onExit} className="btn btn-secondary mt-2 w-full">
               Volver a inicio
             </button>
           </div>
         ) : guardarState.status === 'pidiendo-alias' ? (
-          <form
-            onSubmit={handleConfirmarAlias}
-            className="rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3"
-          >
-            <label htmlFor="alias-ficha" className="text-sm font-semibold text-neutral-100">
+          <form onSubmit={handleConfirmarAlias} className="panel px-4 py-3">
+            <label htmlFor="alias-ficha" className="text-sm font-semibold text-ink">
               ¿Cómo le decís a este cliente?
             </label>
-            <p className="mt-1 text-xs text-neutral-500">
+            <p className="mt-1 text-xs text-ink-muted">
               Un alias o apodo alcanza, no hace falta el nombre completo.
             </p>
             <input
@@ -616,55 +680,49 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
               value={aliasInput}
               onChange={(event) => setAliasInput(event.target.value)}
               placeholder="Ej: Juan (campera roja)"
-              className="mt-3 min-h-14 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 text-base text-neutral-50 placeholder:text-neutral-600"
+              className="mt-3 min-h-14 w-full rounded-xl border border-line bg-app px-4 text-base text-ink placeholder:text-ink-faint"
             />
             <div className="mt-3 flex gap-2">
               <button
                 type="button"
                 onClick={() => setGuardarState({ status: 'idle' })}
-                className="min-h-14 flex-1 rounded-xl border border-neutral-700 px-4 text-sm font-semibold text-neutral-300"
+                className="btn btn-secondary flex-1"
               >
                 Cancelar
               </button>
-              <button
-                type="submit"
-                disabled={aliasInput.trim().length === 0}
-                className="min-h-14 flex-1 rounded-xl bg-lime-400 px-4 text-sm font-semibold text-neutral-950 disabled:opacity-50"
-              >
+              <button type="submit" disabled={aliasInput.trim().length === 0} className="btn btn-primary flex-1">
                 Guardar
               </button>
             </div>
           </form>
         ) : descarteAbierto ? (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3">
-            <p className="text-sm font-semibold text-neutral-100">¿Por qué se descarta este corte?</p>
+          <div className="panel px-4 py-3">
+            <p className="text-sm font-semibold text-ink">¿Por qué se descarta este corte?</p>
             <div className="mt-3 flex flex-col gap-2">
               {DESCARTE_MOTIVOS.map((motivo) => (
                 <button
                   key={motivo}
                   type="button"
                   onClick={() => handleDescartarConMotivo(motivo)}
-                  className="min-h-14 rounded-xl border border-neutral-700 bg-neutral-800 px-4 text-left text-sm font-semibold text-neutral-100 transition active:scale-[0.98]"
+                  className="chip text-left"
                 >
                   {DESCARTE_MOTIVO_LABELS[motivo]}
                 </button>
               ))}
-              <button
-                type="button"
-                onClick={() => setDescarteAbierto(false)}
-                className="min-h-14 rounded-xl border border-neutral-700 px-4 text-sm font-semibold text-neutral-300"
-              >
+              <button type="button" onClick={() => setDescarteAbierto(false)} className="btn btn-secondary">
                 Cancelar
               </button>
             </div>
           </div>
         ) : (
-          <div className="flex gap-2">
+          <div className="flex items-stretch gap-2">
+            {/* "Este hice" es la señal más valiosa (CLAUDE.md 2.3): acción destacada
+                del cierre, más peso que el descarte a su lado. */}
             <button
               type="button"
               onClick={handleEsteHiceClick}
               disabled={guardarState.status === 'guardando'}
-              className="min-h-14 flex-1 rounded-xl bg-neutral-800 px-4 text-sm font-semibold text-neutral-100 transition active:scale-[0.98] disabled:opacity-60"
+              className="min-h-14 flex-[2] rounded-xl bg-select px-4 text-base font-semibold text-on-select transition active:scale-[0.98] disabled:opacity-60"
             >
               {guardarState.status === 'guardando' ? 'Guardando…' : 'Este hice'}
             </button>
@@ -673,15 +731,17 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
               onClick={() => setDescarteAbierto(true)}
               disabled={feedbackSesion === null}
               title={feedbackSesion === null ? 'No disponible en "Repetir el último"' : undefined}
-              className="min-h-14 flex-1 rounded-xl bg-neutral-800 px-4 text-sm font-semibold text-neutral-100 transition active:scale-[0.98] disabled:opacity-40"
+              aria-label="Descartar"
+              className="flex min-h-14 flex-1 items-center justify-center gap-1.5 rounded-xl border border-line px-3 text-xs font-semibold text-ink-muted transition active:scale-[0.98] disabled:opacity-40"
             >
-              👎
+              <ThumbsDownIcon />
+              Descartar
             </button>
           </div>
         )}
 
         {guardarState.status === 'error' && (
-          <p className="rounded-xl border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-200">
+          <p className="rounded-xl border border-danger bg-danger-surface px-4 py-3 text-sm text-danger-ink">
             {guardarState.message}
           </p>
         )}

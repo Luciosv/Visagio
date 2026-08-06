@@ -18,15 +18,27 @@ export const SHARE_CARD_HEIGHT = 1350
 
 const PADDING = 64
 const PANEL_INNER_PADDING = 32
-const CARD_BG = '#0a0a0a'
-const PANEL_BG = '#171717'
-const TEXT_PRIMARY = '#fafafa'
-const TEXT_SECONDARY = '#a3a3a3'
-const ACCENT = '#a3e635' // lime-400, mismo acento que el resto de la UI
+// Paleta A — "Barbería" (carbón + latón), mismos hex que `src/styles/theme.css`
+// (`--color-app`, `--color-surface`, `--color-ink`, `--color-ink-muted`,
+// `--color-accent`). El canvas no puede leer variables CSS, así que quedan
+// hardcodeados acá: si se cambia la paleta en `theme.css`, actualizar también
+// estas cuatro líneas.
+const CARD_BG = '#17140f'
+const PANEL_BG = '#211b12'
+const TEXT_PRIMARY = '#f5efe4'
+const TEXT_SECONDARY = '#b8ae9c'
+const ACCENT = '#c8952f'
 
+// Display (Oswald) para el título del corte, body (Inter) para el resto —
+// mismo par tipográfico que `--font-display`/`--font-body` en `theme.css`.
+// `loadCardFonts` se asegura de que estén cargadas antes de dibujar; si por
+// algo fallara la carga, el navegador cae solo a `system-ui` al no encontrar
+// la familia declarada primero.
+const TITLE_FONT_FAMILY = '"Oswald Variable", "Oswald", system-ui, sans-serif'
+const BODY_FONT_FAMILY = '"Inter Variable", "Inter", system-ui, sans-serif'
 const TITLE_FONT_PX = 64
-const LABEL_FONT = '600 28px system-ui, sans-serif'
-const BODY_FONT = '400 32px system-ui, sans-serif'
+const LABEL_FONT = `600 28px ${BODY_FONT_FAMILY}`
+const BODY_FONT = `400 32px ${BODY_FONT_FAMILY}`
 const BODY_LINE_HEIGHT = 44
 const TITLE_ROW_HEIGHT = 52
 /** Proporción de cada fila de texto donde se apoya la línea de base (evita que el texto de una fila se corte contra el techo/piso de su propia fila, sin tener que medir la métrica real de la fuente). */
@@ -35,6 +47,18 @@ const BASELINE_RATIO = 0.72
 /** Ancho disponible adentro de un panel (sección 3 del encargo: "priorizá que sea legible y prolijo", no que el texto se salga del cartel). */
 const PANEL_CONTENT_WIDTH = SHARE_CARD_WIDTH - PADDING * 2 - PANEL_INNER_PADDING * 2
 
+const IMAGE_SIZE = 480
+/** Aire entre la imagen y el marco redondeado que la envuelve, a cada lado. */
+const IMAGE_BORDER_PAD = 24
+/** Alto del "marco" con esquinas redondeadas alrededor de la imagen: la imagen más su borde de aire arriba y abajo. */
+const IMAGE_BLOCK_HEIGHT = IMAGE_SIZE + IMAGE_BORDER_PAD * 2
+const IMAGE_TO_TITLE_GAP = 72
+const TITLE_TO_ACCENT_GAP = 44
+const ACCENT_HEIGHT = 6
+const ACCENT_TO_PANEL_GAP = 50
+/** Alto reservado al pie para la marca de la barbería (sección 2.2: es el último ítem, chico, no protagonista), medido desde donde termina el bloque de contenido principal hasta el borde inferior del cartel. Ya sin la ficha llevando spec técnica, el bloque principal es más corto — centrarlo dentro del espacio libre (arriba de este pie) es lo que evita el hueco vacío a mitad de cartel. */
+const FOOTER_RESERVED_HEIGHT = 140
+
 /**
  * Dibuja la ficha compartible en un canvas y lo convierte a PNG. No hace
  * ninguna llamada a `navigator.share` acá: eso queda en el handler del botón
@@ -42,6 +66,12 @@ const PANEL_CONTENT_WIDTH = SHARE_CARD_WIDTH - PADDING * 2 - PANEL_INNER_PADDING
  * `share()` y no perder la activación transitoria del usuario (sección 2.2).
  */
 export async function renderShareCardPng(content: ShareCardContent): Promise<Blob> {
+  // El canvas dibuja con la fuente que esté cargada en `document.fonts` EN
+  // ESE MOMENTO: si Oswald/Inter todavía no terminaron de bajar, `fillText`
+  // cae en el fallback de la pila (`system-ui`) sin avisar. Esperar acá antes
+  // de dibujar nada evita fichas con la tipografía equivocada.
+  await loadCardFonts()
+
   const canvas = document.createElement('canvas')
   canvas.width = SHARE_CARD_WIDTH
   canvas.height = SHARE_CARD_HEIGHT
@@ -51,53 +81,90 @@ export async function renderShareCardPng(content: ShareCardContent): Promise<Blo
   ctx.fillStyle = CARD_BG
   ctx.fillRect(0, 0, SHARE_CARD_WIDTH, SHARE_CARD_HEIGHT)
 
-  let cursorY = PADDING
-
-  // Imagen de maniquí, centrada arriba (mismo placeholder que ya se usa en
-  // la card y el detalle — es mismo-origen, así que no tainted el canvas).
-  const image = await loadImage(content.imagen)
-  const imageSize = 420
-  const imageX = (SHARE_CARD_WIDTH - imageSize) / 2
-  drawRoundedRect(ctx, imageX - 24, cursorY - 24, imageSize + 48, imageSize + 48, 28, PANEL_BG)
-  ctx.drawImage(image, imageX, cursorY, imageSize, imageSize)
-  cursorY += imageSize + 64
-
-  // Nombre del corte, grande y centrado. Si no entra en una sola línea con
-  // el ancho disponible, se achica hasta que entre (nombres cortos de la
-  // sección 8 andan bien a 64px, pero no hay que asumirlo para siempre).
-  ctx.fillStyle = TEXT_PRIMARY
-  ctx.textAlign = 'center'
+  // Medir ANTES de dibujar nada: el título achicado y el panel envuelto
+  // determinan el alto real del bloque de contenido (imagen + título + acento
+  // + panel), y ese alto es lo que hace falta para centrarlo verticalmente en
+  // el espacio libre arriba del pie con la marca. Sin el panel de spec (ya
+  // sacado de la ficha, ver Fase F) el bloque quedó bastante más corto que el
+  // cartel de 1350px, así que arrancarlo siempre en `PADDING` dejaba un hueco
+  // vacío grande antes de la marca; centrarlo evita eso.
   const titleFontPx = fitSingleLineFontSize(ctx, content.nombreCorte, SHARE_CARD_WIDTH - PADDING * 2, TITLE_FONT_PX)
-  ctx.font = `700 ${titleFontPx}px system-ui, sans-serif`
-  ctx.fillText(content.nombreCorte, SHARE_CARD_WIDTH / 2, cursorY + titleFontPx)
-  cursorY += titleFontPx + 40
-
-  // Línea de acento debajo del título.
-  ctx.fillStyle = ACCENT
-  ctx.fillRect(SHARE_CARD_WIDTH / 2 - 40, cursorY, 80, 6)
-  cursorY += 48
-
-  ctx.textAlign = 'left'
-
-  // Panel de spec técnica: cada línea se ajusta (word-wrap) al ancho del
-  // panel antes de dibujar nada, así el alto del panel sale de la cantidad
-  // real de líneas envueltas y nunca se corta contra el borde del cartel.
-  ctx.font = BODY_FONT
-  const wrappedSpecLines = content.specLineas.flatMap((linea) => wrapText(ctx, linea, PANEL_CONTENT_WIDTH))
-  cursorY = drawTextPanel(ctx, cursorY, 'SPEC TÉCNICA', wrappedSpecLines)
-  cursorY += 32
-
-  // Panel de mantenimiento + producto/peinado (sección 2.2: "cada cuánto
-  // volver" y "producto y cuánto tarda en peinarse"), sin encabezado propio.
   ctx.font = BODY_FONT
   const wrappedInfoLines = [
     ...wrapText(ctx, content.mantenimiento, PANEL_CONTENT_WIDTH),
     ...wrapText(ctx, content.peinado, PANEL_CONTENT_WIDTH),
   ]
+  const panelHeight = PANEL_INNER_PADDING * 2 + wrappedInfoLines.length * BODY_LINE_HEIGHT
+  const contentHeight =
+    IMAGE_BLOCK_HEIGHT +
+    IMAGE_TO_TITLE_GAP +
+    titleFontPx +
+    TITLE_TO_ACCENT_GAP +
+    ACCENT_HEIGHT +
+    ACCENT_TO_PANEL_GAP +
+    panelHeight
+  const availableHeight = SHARE_CARD_HEIGHT - PADDING - FOOTER_RESERVED_HEIGHT
+  // `cursorY` es donde arranca la IMAGEN (no el marco: el marco sobresale
+  // `IMAGE_BORDER_PAD` por encima). Como `contentHeight` mide el bloque
+  // completo desde el borde superior del marco, hay que sumar ese mismo
+  // `IMAGE_BORDER_PAD` acá para que el reparto de aire arriba/abajo quede
+  // simétrico — sin este ajuste, el marco quedaba 24px más arriba de lo que
+  // le tocaba y el hueco de abajo (antes de la marca) salía visiblemente más
+  // grande que el de arriba.
+  // No arrancar antes de `PADDING + IMAGE_BORDER_PAD`: si algún día el
+  // contenido crece (nombre de corte larguísimo que igual no baja de
+  // `MIN_FONT_PX`, panel con muchas líneas), se prioriza no pisar el borde
+  // superior del cartel por sobre quedar perfectamente centrado.
+  let cursorY = Math.max(
+    PADDING + IMAGE_BORDER_PAD,
+    PADDING + IMAGE_BORDER_PAD + (availableHeight - contentHeight) / 2,
+  )
+
+  // Imagen de maniquí, centrada (mismo placeholder que ya se usa en la card y
+  // el detalle — es mismo-origen, así que no tainted el canvas).
+  const image = await loadImage(content.imagen)
+  const imageX = (SHARE_CARD_WIDTH - IMAGE_SIZE) / 2
+  drawRoundedRect(
+    ctx,
+    imageX - IMAGE_BORDER_PAD,
+    cursorY - IMAGE_BORDER_PAD,
+    IMAGE_SIZE + IMAGE_BORDER_PAD * 2,
+    IMAGE_SIZE + IMAGE_BORDER_PAD * 2,
+    28,
+    PANEL_BG,
+  )
+  ctx.drawImage(image, imageX, cursorY, IMAGE_SIZE, IMAGE_SIZE)
+  cursorY += IMAGE_SIZE + IMAGE_BORDER_PAD + IMAGE_TO_TITLE_GAP
+
+  // Nombre del corte, grande y centrado, en la fuente display (Oswald: la
+  // misma que usa `.font-display` en el resto de la UI). Si no entra en una
+  // sola línea con el ancho disponible, se achica hasta que entre (nombres
+  // cortos de la sección 8 andan bien a 64px, pero no hay que asumirlo para
+  // siempre).
+  ctx.fillStyle = TEXT_PRIMARY
+  ctx.textAlign = 'center'
+  ctx.font = `700 ${titleFontPx}px ${TITLE_FONT_FAMILY}`
+  ctx.fillText(content.nombreCorte, SHARE_CARD_WIDTH / 2, cursorY + titleFontPx)
+  cursorY += titleFontPx + TITLE_TO_ACCENT_GAP
+
+  // Línea de acento debajo del título.
+  ctx.fillStyle = ACCENT
+  ctx.fillRect(SHARE_CARD_WIDTH / 2 - 40, cursorY, 80, ACCENT_HEIGHT)
+  cursorY += ACCENT_HEIGHT + ACCENT_TO_PANEL_GAP
+
+  ctx.textAlign = 'left'
+
+  // Panel único de mantenimiento + producto/peinado (sección 2.2: "cada
+  // cuánto volver" y "producto y cuánto tarda en peinarse"). Ya no hay panel
+  // de spec técnica: esa es lenguaje del barbero y vive en el Detalle de la
+  // app, no en la ficha que ve el cliente (CLAUDE.md 2.2, decisión
+  // revisada — ver Fase F).
   cursorY = drawTextPanel(ctx, cursorY, null, wrappedInfoLines)
 
   // Marca de la barbería, al pie, chica (sección 2.2: "marca de la
-  // barbería" es el último ítem de la lista, no el protagonista).
+  // barbería" es el último ítem de la lista, no el protagonista). Posición
+  // fija respecto del borde inferior, independiente de dónde termine el
+  // bloque centrado de arriba.
   if (content.nombreBarberia.trim().length > 0) {
     ctx.textAlign = 'center'
     ctx.font = LABEL_FONT
@@ -106,6 +173,29 @@ export async function renderShareCardPng(content: ShareCardContent): Promise<Blo
   }
 
   return canvasToPngBlob(canvas)
+}
+
+/**
+ * Se asegura de que Oswald (título) e Inter (cuerpo/labels) estén listas para
+ * `fillText` antes de dibujar. `document.fonts.ready` cubre el caso general;
+ * el `load` puntual del peso/tamaño que realmente se usa fuerza la descarga
+ * si todavía no se había pedido esa variante (ej. primera ficha de la sesión,
+ * antes de que el resto de la UI la haya disparado). Si el navegador no
+ * soporta `document.fonts` (muy viejo) o la carga falla, no se rompe: el
+ * `ctx.font` ya trae `system-ui` como fallback en la pila.
+ */
+async function loadCardFonts(): Promise<void> {
+  if (!('fonts' in document)) return
+  try {
+    await Promise.all([
+      document.fonts.load(`700 ${TITLE_FONT_PX}px ${TITLE_FONT_FAMILY}`),
+      document.fonts.load(BODY_FONT),
+      document.fonts.load(LABEL_FONT),
+    ])
+    await document.fonts.ready
+  } catch {
+    // Sin bloquear la ficha por esto: peor caso, se dibuja con el fallback.
+  }
 }
 
 /**
@@ -183,7 +273,7 @@ function fitSingleLineFontSize(
 ): number {
   const MIN_FONT_PX = 36
   for (let fontPx = maxFontPx; fontPx > MIN_FONT_PX; fontPx -= 4) {
-    ctx.font = `700 ${fontPx}px system-ui, sans-serif`
+    ctx.font = `700 ${fontPx}px ${TITLE_FONT_FAMILY}`
     if (ctx.measureText(text).width <= maxWidth) return fontPx
   }
   return MIN_FONT_PX

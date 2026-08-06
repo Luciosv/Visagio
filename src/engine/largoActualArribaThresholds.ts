@@ -33,10 +33,16 @@ export const LARGO_ACTUAL_ARRIBA_MAX_CM: Record<LargoActualArriba, number> = {
   largo: Number.POSITIVE_INFINITY,
 }
 
-/** Etiquetas en español rioplatense para los chips del form (sección 17: nada de inglés en UI). */
+/**
+ * Etiquetas en español rioplatense para los chips del form (sección 17: nada
+ * de inglés en UI). Cada una lleva el nombre que el barbero reconoce MÁS el
+ * rango en cm al que se refiere (mismos rangos que `LARGO_ACTUAL_ARRIBA_MAX_CM`
+ * de arriba): sin el cm el barbero tiene muy poca info para elegir el bucket
+ * correcto. Si se recalibran los rangos, actualizar los dos a la vez.
+ */
 export const LARGO_ACTUAL_ARRIBA_LABELS: Record<LargoActualArriba, string> = {
-  rapado_maquina: 'Rapado/máquina',
-  corto_tijera: 'Corto con tijera',
-  media_melena: 'Media melena',
-  largo: 'Largo',
+  rapado_maquina: 'Rapado / máquina · 0-3 cm',
+  corto_tijera: 'Corto con tijera · 3-6 cm',
+  media_melena: 'Media melena · 6-12 cm',
+  largo: 'Largo · 12+ cm',
 }

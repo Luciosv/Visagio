@@ -4,18 +4,14 @@
 // de la sección 10:
 //
 //   INICIO
-//    ├─ [Buscar cliente]   ← stub, lo construye la Fase 6b (búsqueda +
-//    │                        historial)
-//    ├─ [Cliente nuevo]    ← flujo YA EXISTENTE, sin tocarle la lógica
-//    │                        interna (`screens/NuevoClienteScreen.tsx`)
-//    └─ "Datos y privacidad" ← stub, lo construye la Fase 6b (cuánto hay
-//                               guardado, exportar todo, borrar todo)
+//    ├─ [Buscar cliente]   ← ruta principal (90% del uso, sección 5)
+//    ├─ [Cliente nuevo]    ← flujo completo de análisis
+//    └─ "Datos y privacidad" ← al pie, al lado de la versión
 //
-// "Buscar cliente" es la ruta principal (90% del uso real, sección 5), pero
-// TODAVÍA no tiene nada atrás: se muestra igual, arriba y primero, para que
-// el layout ya quede armado como va a quedar cuando el otro agente la
-// implemente — no se le da menos jerarquía visual solo porque hoy es un
-// stub.
+// Rediseño (Fase A): esta es la pantalla "cara" del sistema (frontend-design:
+// "el hero es una tesis"). Marca en display condensado tipo cartel de
+// barbería (Oswald), con una regla de latón como elemento de firma. Usa los
+// tokens de `src/styles/theme.css`, nunca colores crudos.
 
 export type HomeDestination = 'buscar-cliente' | 'cliente-nuevo' | 'datos-privacidad'
 
@@ -25,40 +21,49 @@ interface HomeScreenProps {
 
 export function HomeScreen({ onNavigate }: HomeScreenProps) {
   return (
-    <div className="flex min-h-svh flex-col items-center bg-neutral-950 px-4 pb-16 pt-12 text-neutral-50">
-      <h1 className="text-3xl font-semibold tracking-tight">Visagio</h1>
-      <p className="mt-1 text-sm text-neutral-400">Asistente de visagismo para barbería</p>
+    <div className="flex min-h-svh flex-col items-center bg-app px-4 pt-16 text-ink">
+      {/* Marca: wordmark en display condensado + regla de latón (firma). */}
+      <header className="flex flex-col items-center">
+        <h1 className="font-display text-5xl font-semibold uppercase tracking-[0.2em] text-ink">
+          Visagio
+        </h1>
+        <span className="mt-3 h-px w-16 bg-accent" aria-hidden />
+        <p className="mt-3 text-sm tracking-wide text-ink-muted">
+          Asistente de visagismo para barbería
+        </p>
+      </header>
 
-      <div className="mt-10 flex w-full max-w-sm flex-col gap-3">
+      <div className="mt-12 flex w-full max-w-sm flex-col gap-3">
         <button
           type="button"
-          onClick={() => onNavigate('buscar-cliente')}
-          className="min-h-14 w-full rounded-xl border border-neutral-700 bg-neutral-900 px-6 text-left text-lg font-semibold text-neutral-50 transition active:scale-[0.98]"
+          onClick={() => onNavigate('cliente-nuevo')}
+          className="min-h-14 w-full rounded-xl bg-accent px-6 py-4 text-left transition active:scale-[0.98]"
         >
-          Buscar cliente
-          <span className="mt-0.5 block text-xs font-normal text-neutral-500">
-            Ver ficha, historial y repetir el último corte
+          <span className="font-display text-xl font-semibold uppercase tracking-wide text-on-accent">
+            Cliente nuevo
+          </span>
+          <span className="mt-0.5 block text-xs font-medium text-on-accent/70">
+            Foto, forma de cara y recomendación completa
           </span>
         </button>
 
         <button
           type="button"
-          onClick={() => onNavigate('cliente-nuevo')}
-          className="min-h-14 w-full rounded-xl bg-lime-400 px-6 text-left text-lg font-semibold text-neutral-950 transition active:scale-[0.98]"
+          onClick={() => onNavigate('buscar-cliente')}
+          className="min-h-14 w-full rounded-xl border border-line bg-surface px-6 py-4 text-left transition active:scale-[0.98] hover:border-accent"
         >
-          Cliente nuevo
-          <span className="mt-0.5 block text-xs font-normal text-neutral-950/70">
-            Foto, forma de cara y recomendación completa
+          <span className="font-display text-xl font-semibold uppercase tracking-wide text-ink">
+            Buscar cliente
+          </span>
+          <span className="mt-0.5 block text-xs font-medium text-ink-muted">
+            Ver ficha, historial y repetir el último corte
           </span>
         </button>
       </div>
 
-      {/* Pie, chico, con "Datos y privacidad" AL LADO de la versión (sección
-          10: "no un botón grande en el flujo principal — pensarlo al lado
-          del número de versión"). Por eso esta pantalla arma su propio pie
-          en vez de reusar `VersionFooter` a secas: es la única que necesita
-          este link. */}
-      <footer className="fixed inset-x-0 bottom-0 flex items-center justify-center gap-3 py-3 text-xs text-neutral-500">
+      {/* Pie en el flujo (no `fixed`): "Datos y privacidad" chico AL LADO de la
+          versión (sección 10). `mt-auto` lo pega abajo sin taparlo con nada. */}
+      <footer className="mt-auto flex items-center justify-center gap-3 pt-8 pb-4 text-xs text-ink-faint">
         <button
           type="button"
           onClick={() => onNavigate('datos-privacidad')}

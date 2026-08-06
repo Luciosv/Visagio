@@ -2,13 +2,25 @@
 // que copiar y pegar). Extraídas de lo que antes vivía todo en `App.tsx`
 // cuando la app era un único flujo (Fase 6a: se partió `App.tsx` en
 // pantallas — ver `src/screens/`).
+//
+// Rediseño (Fase A): estas piezas usan las clases de componente y los tokens
+// semánticos de `src/styles/theme.css` (`.chip`, `text-ink-*`), nunca colores
+// crudos de Tailwind — así cambiar de tema es editar un solo archivo.
 
 import type { ReactNode } from 'react'
 
-/** `v0.4.2` chico en el pie de pantalla (sección 6: "número de versión visible"). Lo muestran todas las pantallas de la app. */
+/**
+ * `v0.4.2` chico en el pie de pantalla (sección 6: "número de versión visible").
+ * Lo muestran todas las pantallas de la app.
+ *
+ * EN EL FLUJO del documento (no `fixed`): pegado abajo con `mt-auto` dentro de
+ * la columna `min-h-svh` de cada pantalla. Antes era `position: fixed` y tapaba
+ * contenido real (el botón de compartir, el input de alias, los chips de
+ * descarte) cuando la pantalla scrolleaba.
+ */
 export function VersionFooter() {
   return (
-    <footer className="fixed inset-x-0 bottom-0 py-3 text-center text-xs text-neutral-500">
+    <footer className="mt-auto w-full pt-8 pb-4 text-center text-xs text-ink-faint">
       v{__APP_VERSION__}
     </footer>
   )
@@ -28,13 +40,7 @@ export function Chip({ label, selected, onClick, capitalize = false }: ChipProps
       type="button"
       onClick={onClick}
       aria-pressed={selected}
-      className={
-        'min-h-14 rounded-xl border px-4 text-sm font-semibold transition active:scale-[0.98] ' +
-        (capitalize ? 'capitalize ' : '') +
-        (selected
-          ? 'border-lime-400 bg-lime-400 text-neutral-950'
-          : 'border-neutral-700 bg-neutral-800 text-neutral-200')
-      }
+      className={'chip' + (capitalize ? ' capitalize' : '')}
     >
       {label}
     </button>
@@ -48,8 +54,8 @@ interface ChipGroupSectionProps {
 
 export function ChipGroupSection({ title, children }: ChipGroupSectionProps) {
   return (
-    <div className="mt-4">
-      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-500">{title}</p>
+    <div className="mt-5">
+      <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-ink-muted">{title}</p>
       <div className="flex flex-wrap gap-2">{children}</div>
     </div>
   )

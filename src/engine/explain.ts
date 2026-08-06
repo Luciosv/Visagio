@@ -106,19 +106,19 @@ function buildPositiveClauses(
   const clauses: Clause[] = [
     {
       magnitude: breakdown.formaTop1,
-      text: `${describeShapeRatio(top1.shape, ratios)} (forma ${FACE_SHAPE_LABELS[top1.shape]}, afinidad ${cut.afinidadForma[top1.shape]}/5 con este corte)`,
+      text: `${describeShapeRatio(top1.shape, ratios)} (forma ${FACE_SHAPE_LABELS[top1.shape]}, afinidad ${cut.afinidadForma[top1.shape]}/5)`,
     },
     {
       magnitude: breakdown.formaTop2,
-      text: `${describeShapeRatio(top2.shape, ratios)} (forma ${FACE_SHAPE_LABELS[top2.shape]}, afinidad ${cut.afinidadForma[top2.shape]}/5 con este corte)`,
+      text: `${describeShapeRatio(top2.shape, ratios)} (forma ${FACE_SHAPE_LABELS[top2.shape]}, afinidad ${cut.afinidadForma[top2.shape]}/5)`,
     },
     {
       magnitude: breakdown.textura,
-      text: `el pelo ${HAIR_TEXTURE_LABELS[barberInput.textura]} (afinidad ${cut.afinidadTextura[barberInput.textura]}/5 con este corte)`,
+      text: `el pelo ${HAIR_TEXTURE_LABELS[barberInput.textura]} (afinidad ${cut.afinidadTextura[barberInput.textura]}/5)`,
     },
     {
       magnitude: breakdown.densidad,
-      text: `la densidad ${HAIR_DENSITY_LABELS[barberInput.densidad]} (afinidad ${cut.afinidadDensidad[barberInput.densidad]}/5 con este corte)`,
+      text: `la densidad ${HAIR_DENSITY_LABELS[barberInput.densidad]} (afinidad ${cut.afinidadDensidad[barberInput.densidad]}/5)`,
     },
   ]
 
@@ -149,7 +149,7 @@ function buildNegativeClauses(
   if (breakdown.minutosExceso > 0) {
     clauses.push({
       magnitude: breakdown.penalizacionPeinado,
-      text: `que pide ${cut.minutosDePeinado} min de peinado y el cliente dijo que le dedica ${barberInput.minutosDeclarados}`,
+      text: `el peinado: pide ${cut.minutosDePeinado} min y el cliente se dedica ${barberInput.minutosDeclarados}`,
     })
   }
 
