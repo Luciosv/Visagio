@@ -50,6 +50,8 @@ import { publishDebugSnapshot } from './vision/debugHook'
 import { recommendCuts } from './engine/recommend'
 import { explainRecommendation, HAIR_DENSITY_LABELS, HAIR_TEXTURE_LABELS } from './engine/explain'
 import { LARGO_ACTUAL_ARRIBA_LABELS } from './engine/largoActualArribaThresholds'
+import { buildShareCardContent } from './engine/shareCard'
+import { renderShareCardPng, shareCardPng } from './shareImage'
 
 declare global {
   interface Window {
@@ -91,7 +93,7 @@ const CUT_LENGTH_LABELS: Record<CutLength, string> = {
 const RESULTS_TOP_N = 5
 
 /** Default seguro mientras `config.json` todavía no cargó (o si falla): sin debug, que es lo que tiene que ver el barbero (sección 6). */
-const DEFAULT_CONFIG: AppConfig = { mostrarDebug: false }
+const DEFAULT_CONFIG: AppConfig = { mostrarDebug: false, nombreBarberia: '' }
 
 /**
  * Todo lo que la pantalla de resultados necesita para mostrar las cards y
@@ -456,6 +458,7 @@ function App() {
     return (
       <ResultsScreen
         results={results}
+        config={config}
         lengthFilter={lengthFilter}
         onLengthFilterChange={setLengthFilter}
         selected={selectedRecommendation}
@@ -1013,6 +1016,7 @@ function BarberForm({
 
 interface ResultsScreenProps {
   readonly results: ResultsContext
+  readonly config: AppConfig
   readonly lengthFilter: CutLength | 'todos'
   readonly onLengthFilterChange: (filter: CutLength | 'todos') => void
   readonly selected: CutRecommendation | null
@@ -1028,9 +1032,9 @@ interface ResultsScreenProps {
  * del cliente, tap 5 del form) — son dos conceptos con nombres parecidos a
  * propósito de no confundir.
  */
-function ResultsScreen({ results, lengthFilter, onLengthFilterChange, selected, onSelect, onBack }: ResultsScreenProps) {
+function ResultsScreen({ results, config, lengthFilter, onLengthFilterChange, selected, onSelect, onBack }: ResultsScreenProps) {
   if (selected) {
-    return <CutDetailScreen recommendation={selected} onBack={() => onSelect(null)} />
+    return <CutDetailScreen recommendation={selected} config={config} onBack={() => onSelect(null)} />
   }
 
   const filtered = results.recommendations.filter((r) => lengthFilter === 'todos' || r.cut.longitud === lengthFilter)
@@ -1140,17 +1144,77 @@ function CutCard({ recommendation, faceShape, ratios, barberInput, onOpen }: Cut
 
 interface CutDetailScreenProps {
   readonly recommendation: CutRecommendation
+  readonly config: AppConfig
   readonly onBack: () => void
 }
 
 /**
- * Detalle de un corte (sección 10): spec, pasos, cuidados, mantenimiento. Los
- * botones de compartir/"este hice"/👎 quedan deshabilitados a propósito — es
- * el lugar visual preparado para la Fase 5 (compartir) y Fase 7 (feedback),
- * SIN implementar su funcionalidad todavía (encargo explícito de esta fase).
+ * Estado del botón "Compartir al cliente" (sección 2.2). Vive acá, no en
+ * `types.ts`: es estado transitorio de esta pantalla, no un tipo de dominio
+ * (mismo criterio que `Stage`/`ResultsContext` más arriba en este archivo).
+ *
+ *  - `idle`: nada en curso.
+ *  - `generando`: armando el PNG (carga de imagen + `canvas.toBlob`).
+ *  - `fallback`: `canShare({ files })` no está disponible (típico en
+ *    desktop) — se ofrece la descarga manual en su lugar.
+ *  - `error`: algo falló armando el PNG (no un rechazo/cancelación del
+ *    usuario en el share nativo, eso se trata como `idle`).
  */
-function CutDetailScreen({ recommendation, onBack }: CutDetailScreenProps) {
+type ShareState =
+  | { readonly status: 'idle' }
+  | { readonly status: 'generando' }
+  | { readonly status: 'fallback'; readonly url: string }
+  | { readonly status: 'error'; readonly message: string }
+
+/**
+ * Detalle de un corte (sección 10): spec, pasos, cuidados, mantenimiento, y
+ * ahora "Compartir al cliente" (segunda mitad de la Fase 5: PNG + Web Share,
+ * sección 2.2). "Este hice" y 👎 siguen deshabilitados a propósito: son
+ * Fase 7, no esta.
+ */
+function CutDetailScreen({ recommendation, config, onBack }: CutDetailScreenProps) {
   const { cut, caminoEnVariosCortes } = recommendation
+  const [shareState, setShareState] = useState<ShareState>({ status: 'idle' })
+
+  // Libera el blob URL del fallback anterior en cuanto se deja atrás ese
+  // estado (nuevo intento de compartir, o se desmonta la pantalla con el
+  // fallback todavía mostrado) para no dejar memoria colgada. Depende de
+  // `shareState` a propósito: la limpieza de CADA render corre con el valor
+  // de ESE render antes de pasar al siguiente, así que revoca justo la URL
+  // que está por quedar huérfana, no una capturada una sola vez al montar.
+  useEffect(() => {
+    return () => {
+      if (shareState.status === 'fallback') URL.revokeObjectURL(shareState.url)
+    }
+  }, [shareState])
+
+  async function handleShareClick() {
+    setShareState({ status: 'generando' })
+    try {
+      const content = buildShareCardContent(recommendation, config)
+      const blob = await renderShareCardPng(content)
+      // A partir de acá no hay más awaits que no sean el propio `share()`:
+      // la sección 2.2 pide dispararlo pegado al click, sin trabajo de por
+      // medio, para no perder la activación transitoria del usuario.
+      const result = await shareCardPng(blob)
+      if (result === 'compartido') {
+        setShareState({ status: 'idle' })
+      } else {
+        setShareState({ status: 'fallback', url: URL.createObjectURL(blob) })
+      }
+    } catch (error) {
+      // El barbero cerró el panel nativo de compartir: no es un error, es
+      // una cancelación normal, se vuelve a `idle` en silencio.
+      if (error instanceof DOMException && error.name === 'AbortError') {
+        setShareState({ status: 'idle' })
+        return
+      }
+      setShareState({
+        status: 'error',
+        message: 'No se pudo generar la imagen para compartir. Probá de nuevo.',
+      })
+    }
+  }
 
   return (
     <div className="flex min-h-svh flex-col items-center bg-neutral-950 px-4 pb-20 pt-8 text-neutral-50">
@@ -1214,17 +1278,38 @@ function CutDetailScreen({ recommendation, onBack }: CutDetailScreenProps) {
         </p>
       </div>
 
-      {/* Lugar preparado para "Compartir al cliente" (Fase 5, PNG + Web
-          Share) y "Este hice" / 👎 (Fase 7). Deshabilitados a propósito: no
-          es responsabilidad de esta fase implementarlos. */}
+      {/* "Compartir al cliente" (segunda mitad de la Fase 5: PNG + Web
+          Share, sección 2.2). "Este hice" / 👎 siguen deshabilitados: son
+          Fase 7, no esta. */}
       <div className="mt-4 flex w-full max-w-sm flex-col gap-2">
         <button
           type="button"
-          disabled
-          className="min-h-14 w-full rounded-xl bg-neutral-800 px-6 text-base font-semibold text-neutral-500"
+          onClick={handleShareClick}
+          disabled={shareState.status === 'generando'}
+          className="min-h-14 w-full rounded-xl bg-lime-400 px-6 text-base font-semibold text-neutral-950 transition active:scale-[0.98] disabled:opacity-60"
         >
-          Compartir al cliente (próximamente)
+          {shareState.status === 'generando' ? 'Armando la ficha…' : 'Compartir al cliente'}
         </button>
+
+        {shareState.status === 'fallback' && (
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
+            <p>Guardá la imagen y mandala por WhatsApp.</p>
+            <a
+              href={shareState.url}
+              download="corte.png"
+              className="mt-2 flex min-h-14 items-center justify-center rounded-xl border border-lime-400 px-4 text-sm font-semibold text-lime-400"
+            >
+              Descargar imagen
+            </a>
+          </div>
+        )}
+
+        {shareState.status === 'error' && (
+          <p className="rounded-xl border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-200">
+            {shareState.message}
+          </p>
+        )}
+
         <div className="flex gap-2">
           <button
             type="button"

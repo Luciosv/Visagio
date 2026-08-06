@@ -102,6 +102,12 @@ describe('cuts.seed.json', () => {
 
       expect(typeof cut.mantenimientoSemanas).toBe('number')
       expect(typeof cut.minutosDePeinado).toBe('number')
+
+      // Sección 2.2: la ficha compartible lleva "producto y cuánto tarda en
+      // peinarse". `minutosDePeinado` ya estaba; `producto` se agregó en la
+      // segunda mitad de la Fase 5 junto con la ficha PNG.
+      expect(typeof cut.producto).toBe('string')
+      expect(cut.producto.length).toBeGreaterThan(0)
       expect(cut.dificultad).toBeGreaterThanOrEqual(1)
       expect(cut.dificultad).toBeLessThanOrEqual(5)
       expect(typeof cut.tiempoEjecucionMin).toBe('number')

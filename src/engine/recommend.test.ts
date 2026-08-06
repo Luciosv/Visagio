@@ -23,6 +23,7 @@ function buildCut(overrides: Partial<Cut> & Pick<Cut, 'id'>): Cut {
     dificultad: 1,
     tiempoEjecucionMin: 20,
     verificado: false,
+    producto: 'sin producto',
     imagenes: { tresCuartos: '/cuts/placeholder-3-4.svg', posterior: '/cuts/placeholder-posterior.svg' },
     largoMinimoArribaCm: 0,
   }

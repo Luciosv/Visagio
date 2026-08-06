@@ -294,6 +294,14 @@ export interface Cut {
   readonly dificultad: number
   readonly tiempoEjecucionMin: number
   readonly verificado: boolean
+  /**
+   * Producto sugerido para el peinado diario de este corte (sección 2.2: la
+   * ficha compartible lleva "producto y cuánto tarda en peinarse"). Igual
+   * criterio que el resto de `cuts.seed.json`: conocimiento público de
+   * barbería, no de taller — cae bajo el mismo `verificado: false` del corte,
+   * no tiene su propio flag.
+   */
+  readonly producto: string
   readonly imagenes: CutImages
   /**
    * Mínimo de centímetros de largo ARRIBA que necesita este corte para
@@ -363,4 +371,12 @@ export interface AppConfig {
    * barbero (sección 10: "el modo debug detrás de un flag").
    */
   readonly mostrarDebug: boolean
+  /**
+   * Marca de la barbería, para el pie de la ficha compartible (sección 2.2:
+   * "marca de la barbería"). Placeholder por ahora: todavía no existe una
+   * pantalla de ajustes donde el barbero la cargue (fuera de alcance de esta
+   * fase, sección 11 — no construir esa pantalla sin que se pida). Cuando
+   * exista, este valor pasa a salir de ahí en vez de `config.json`.
+   */
+  readonly nombreBarberia: string
 }
