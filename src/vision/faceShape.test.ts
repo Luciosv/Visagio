@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { FaceRatios } from '../types'
 import { applyFaceShapeOverride, classifyFaceShape, explainFaceShape } from './faceShape'
+import { FACE_SHAPE_OVERRIDE_CONFIDENCE } from './faceShapeThresholds'
 
 /** Arma un `FaceRatios` completo pisando solo los campos relevantes al test. */
 function buildRatios(overrides: Partial<FaceRatios>): FaceRatios {
@@ -117,8 +118,9 @@ describe('applyFaceShapeOverride', () => {
     const result = applyFaceShapeOverride(classification, classification.top2.shape)
 
     expect(result.top1.shape).toBe(classification.top2.shape)
-    expect(result.top1.confidence).toBe(1)
+    expect(result.top1.confidence).toBe(FACE_SHAPE_OVERRIDE_CONFIDENCE)
     expect(result.top2.shape).toBe(originalTop1.shape)
+    expect(result.top2.confidence).toBe(1 - FACE_SHAPE_OVERRIDE_CONFIDENCE)
   })
 
   it('si corrige a una forma que no era ni top1 ni top2, el top2 original se mantiene', () => {
@@ -130,8 +132,20 @@ describe('applyFaceShapeOverride', () => {
     const result = applyFaceShapeOverride(classification, otherShape)
 
     expect(result.top1.shape).toBe(otherShape)
-    expect(result.top1.confidence).toBe(1)
+    expect(result.top1.confidence).toBe(FACE_SHAPE_OVERRIDE_CONFIDENCE)
     expect(result.top2.shape).toBe(originalTop2.shape)
+    expect(result.top2.confidence).toBe(1 - FACE_SHAPE_OVERRIDE_CONFIDENCE)
+  })
+
+  it('nunca deja una etiqueta unica con confianza total: el top1 corregido no llega a 100%', () => {
+    const ratios = buildRatios({ r1: 2.0, r2: 0.9, r3: 0.85, r4: 130 })
+    const classification = classifyFaceShape(ratios)
+    const otherShape = classification.scores[classification.scores.length - 1].shape
+
+    const result = applyFaceShapeOverride(classification, otherShape)
+
+    expect(result.top1.confidence).toBeLessThan(1)
+    expect(result.scores.reduce((sum, s) => sum + s.confidence, 0)).toBeCloseTo(1)
   })
 })
 

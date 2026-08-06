@@ -168,3 +168,22 @@ export const R4_CUADRADA_END = 130
 /** Redonda: ángulo obtuso/suave. Empieza a contar en 125°, plena desde 140°. */
 export const R4_REDONDA_START = 125
 export const R4_REDONDA_FULL = 140
+
+// ---------------------------------------------------------------------------
+// Override manual del barbero (applyFaceShapeOverride en faceShape.ts)
+// ---------------------------------------------------------------------------
+//
+// Investigado contra literatura de clasificacion de forma de cara y de
+// visagismo: la mayoria de las caras reales son una combinacion de dos
+// formas, no una forma "pura" (es la misma razon por la que la seccion 3 de
+// CLAUDE.md elige top-2 en vez de una etiqueta unica para el algoritmo). Por
+// eso, aunque el barbero corrija la forma sugerida, NO se le asigna 100% de
+// confianza: seria repetir el problema de "etiqueta unica con seguridad
+// falsa" que la spec pide evitar, ahora con un humano en vez de un algoritmo.
+// En cambio, se le da una confianza alta pero no total, y la forma real que
+// el algoritmo tenia como top1 original queda como segunda opcion con el
+// resto. A calibrar con uso real: no hay un numero "correcto" en la
+// bibliografia, solo el principio de mantener una segunda forma viva.
+
+/** Confianza que recibe la forma corregida por el barbero. El resto (1 - esto) va al top2. */
+export const FACE_SHAPE_OVERRIDE_CONFIDENCE = 0.75

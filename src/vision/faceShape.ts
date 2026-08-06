@@ -21,6 +21,7 @@
 import type { FaceRatios, FaceShape, FaceShapeClassification, FaceShapeScore } from '../types'
 import { FACE_SHAPES } from '../types'
 import {
+  FACE_SHAPE_OVERRIDE_CONFIDENCE,
   HEART_FOREHEAD_TO_JAW_FULL,
   HEART_FOREHEAD_TO_JAW_START,
   R1_ALARGADA_FULL,
@@ -180,12 +181,15 @@ function scoreTriangular(r: FaceRatios): number {
  * algoritmo (Fase 5: wiring de form → motor → resultados).
  *
  * Si `corrected` ya es el top1 original, no hay nada que tocar. Si no,
- * `corrected` pasa a ser el nuevo top1 con confianza plena — el barbero está
- * seguro, no tiene sentido repartirle una confianza fraccionaria como la que
- * calcula el algoritmo — y el top2 queda así: si `corrected` era el top2
- * original, el antiguo top1 baja a top2 (se conserva la otra opción real que
- * el algoritmo había detectado); si `corrected` no era ninguna de las dos
- * top, el top2 original se mantiene sin cambios.
+ * `corrected` pasa a ser el nuevo top1 con `FACE_SHAPE_OVERRIDE_CONFIDENCE`
+ * de confianza (ver `faceShapeThresholds.ts`: NO es 100%, a propósito — la
+ * mayoría de las caras reales son una combinación de dos formas, así que
+ * forzar una etiqueta única con seguridad total repetiría, ahora con un
+ * humano en vez del algoritmo, el problema que la sección 3 de CLAUDE.md
+ * quiere evitar). El resto (1 - esa confianza) queda para la otra forma real
+ * más fuerte: si `corrected` era el top2 original, el antiguo top1 pasa a
+ * top2; si no, el top2 original se mantiene. El resto de las 7 formas queda
+ * en 0 (toda la masa se concentra en las dos que se muestran).
  */
 export function applyFaceShapeOverride(
   classification: FaceShapeClassification,
@@ -194,9 +198,21 @@ export function applyFaceShapeOverride(
   const { top1, top2 } = classification
   if (corrected === top1.shape) return classification
 
-  const newTop1: FaceShapeScore = { shape: corrected, rawScore: 1, confidence: 1 }
-  const newTop2 = corrected === top2.shape ? top1 : top2
-  const rest = classification.scores.filter((s) => s.shape !== newTop1.shape && s.shape !== newTop2.shape)
+  const secondBest = corrected === top2.shape ? top1 : top2
+
+  const newTop1: FaceShapeScore = {
+    shape: corrected,
+    rawScore: FACE_SHAPE_OVERRIDE_CONFIDENCE,
+    confidence: FACE_SHAPE_OVERRIDE_CONFIDENCE,
+  }
+  const newTop2: FaceShapeScore = {
+    shape: secondBest.shape,
+    rawScore: 1 - FACE_SHAPE_OVERRIDE_CONFIDENCE,
+    confidence: 1 - FACE_SHAPE_OVERRIDE_CONFIDENCE,
+  }
+  const rest = classification.scores
+    .filter((s) => s.shape !== newTop1.shape && s.shape !== newTop2.shape)
+    .map((s) => ({ ...s, rawScore: 0, confidence: 0 }))
 
   return { scores: [newTop1, newTop2, ...rest], top1: newTop1, top2: newTop2 }
 }
