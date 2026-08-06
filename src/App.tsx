@@ -707,24 +707,26 @@ function App() {
         </div>
       )}
 
-      <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-xs text-neutral-400">
-        <p className="mb-2 font-semibold text-neutral-100">Referencia de colores del overlay</p>
-        <ul className="space-y-1">
-          <li className="flex items-center gap-2">
-            <span className="inline-block h-3 w-3 rounded-full bg-lime-400" />
-            Malla completa (478 puntos)
-          </li>
-          {DEBUG_HIGHLIGHT_GROUPS.map((group) => (
-            <li key={group.label} className="flex items-center gap-2">
-              <span
-                className="inline-block h-3 w-3 rounded-full border border-black/40"
-                style={{ backgroundColor: group.color }}
-              />
-              {group.label}
+      {config.mostrarDebug && (
+        <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-xs text-neutral-400">
+          <p className="mb-2 font-semibold text-neutral-100">Referencia de colores del overlay</p>
+          <ul className="space-y-1">
+            <li className="flex items-center gap-2">
+              <span className="inline-block h-3 w-3 rounded-full bg-lime-400" />
+              Malla completa (478 puntos)
             </li>
-          ))}
-        </ul>
-      </div>
+            {DEBUG_HIGHLIGHT_GROUPS.map((group) => (
+              <li key={group.label} className="flex items-center gap-2">
+                <span
+                  className="inline-block h-3 w-3 rounded-full border border-black/40"
+                  style={{ backgroundColor: group.color }}
+                />
+                {group.label}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {ratios && faceShapeClassification && faceShapeCorrected && (
         <BarberForm
