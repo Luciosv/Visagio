@@ -1,15 +1,19 @@
-# Imágenes de maniquí — placeholders temporales
+# Imágenes de maniquí
 
-`placeholder-3-4.svg` y `placeholder-posterior.svg` son siluetas genéricas
-reutilizadas por los 15 cortes de `public/data/cuts.seed.json`. No representan
-ningún corte en particular: son solo para que el campo `imagenes` de cada
-corte apunte a algo que existe y las cards de la Fase 5 no rompan por un 404.
+Vista 3/4 (`<id>-3-4.webp`): las 15 imágenes reales de la sección 15 de
+CLAUDE.md, una por corte de `public/data/cuts.seed.json`. Generadas con
+Nano Banana 2 a partir de una misma cabeza base (mismo maniquí blanco sin
+rasgos faciales, mismo ángulo 3/4, misma iluminación, fondo neutro) variando
+solo el pelo, y procesadas a WebP ~600px de lado largo.
 
-Reemplazar por las imágenes de maniquí reales de la sección 15 de CLAUDE.md
-(cabezas blancas sin rasgos faciales, mismo ángulo 3/4 y posterior, misma
-iluminación, fondo neutro, WebP ~600px) cuando se generen. Mientras tanto,
-`verificado: false` en cada corte ya señala que todo el registro —incluidas
-estas imágenes— es un punto de partida a revisar, no un dato final.
+Vista posterior: todavía en `placeholder-posterior.svg` (silueta genérica),
+no generada. La app hoy solo usa la vista 3/4 (cards, detalle, ficha
+compartible); la posterior queda pendiente para cuando haga falta.
+
+`verificado: false` en cada corte de `cuts.seed.json` sigue señalando que el
+resto del registro (spec, pasos, tiempos) es un punto de partida a revisar
+con el barbero, no un dato final — no aplica a las imágenes, que ya son
+definitivas.
 
 ## `largoMinimoArribaCm` (Fase 5)
 

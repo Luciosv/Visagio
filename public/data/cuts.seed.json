@@ -30,7 +30,7 @@
     "tiempoEjecucionMin": 15,
     "verificado": false,
     "producto": "ninguno",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/rapado-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 0
   },
   {
@@ -64,7 +64,7 @@
     "tiempoEjecucionMin": 20,
     "verificado": false,
     "producto": "cera mate",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/crew-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 1
   },
   {
@@ -98,7 +98,7 @@
     "tiempoEjecucionMin": 25,
     "verificado": false,
     "producto": "pomada o crema liviana",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/taper-bajo-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 4
   },
   {
@@ -132,7 +132,7 @@
     "tiempoEjecucionMin": 30,
     "verificado": false,
     "producto": "pomada con brillo (mate si el pelo es rulo)",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/low-fade-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 5
   },
   {
@@ -166,7 +166,7 @@
     "tiempoEjecucionMin": 30,
     "verificado": false,
     "producto": "cera o pomada",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/mid-fade-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 6
   },
   {
@@ -200,7 +200,7 @@
     "tiempoEjecucionMin": 35,
     "verificado": false,
     "producto": "cera o gel de fijación fuerte",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/high-fade-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 7
   },
   {
@@ -234,7 +234,7 @@
     "tiempoEjecucionMin": 25,
     "verificado": false,
     "producto": "cera mate",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/french-crop-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 3
   },
   {
@@ -268,7 +268,7 @@
     "tiempoEjecucionMin": 30,
     "verificado": false,
     "producto": "pomada con fijación fuerte",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/undercut-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 8
   },
   {
@@ -302,7 +302,7 @@
     "tiempoEjecucionMin": 30,
     "verificado": false,
     "producto": "pomada con brillo",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/side-part-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 6
   },
   {
@@ -336,7 +336,7 @@
     "tiempoEjecucionMin": 35,
     "verificado": false,
     "producto": "fijador fuerte con brillo",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/pompadour-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 10
   },
   {
@@ -370,7 +370,7 @@
     "tiempoEjecucionMin": 35,
     "verificado": false,
     "producto": "crema texturizadora",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/capas-medias-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 8
   },
   {
@@ -404,7 +404,7 @@
     "tiempoEjecucionMin": 35,
     "verificado": false,
     "producto": "crema o pasta texturizadora",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/mullet-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 8
   },
   {
@@ -438,7 +438,7 @@
     "tiempoEjecucionMin": 40,
     "verificado": false,
     "producto": "crema para rulos sin sulfatos",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/rulos-en-capas-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 10
   },
   {
@@ -472,7 +472,7 @@
     "tiempoEjecucionMin": 40,
     "verificado": false,
     "producto": "sérum o crema sin enjuague",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/largo-en-capas-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 15
   },
   {
@@ -506,7 +506,7 @@
     "tiempoEjecucionMin": 30,
     "verificado": false,
     "producto": "cera o pomada para prolijar el rodete",
-    "imagenes": { "tresCuartos": "/cuts/placeholder-3-4.svg", "posterior": "/cuts/placeholder-posterior.svg" },
+    "imagenes": { "tresCuartos": "/cuts/top-knot-3-4.webp", "posterior": "/cuts/placeholder-posterior.svg" },
     "largoMinimoArribaCm": 15
   }
 ]
