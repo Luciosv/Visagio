@@ -291,7 +291,9 @@ es una red de seguridad. Que lo use una vez por semana hasta que haya backend.
 
 **Feature flags.** Un `config.json` chico al lado de `cuts.json` con banderas
 booleanas. Permite prender o apagar una pantalla sin redeploy, y desactivar algo
-que salió mal sin esperar a un build.
+que salió mal sin esperar a un build. La primera bandera, `mostrarDebug`
+(default `false`), se adelantó durante la Fase 5 para ocultar los paneles
+numéricos de la sección 10 sin esperar al pulido de la Fase 7.
 
 ---
 
@@ -456,7 +458,15 @@ Reglas de UI, en serio:
 - Targets de 56 px mínimo, todo alcanzable con un pulgar
 - Contraste alto: la barbería tiene luz fuerte y espejos
 - Nada de scroll horizontal, nada de hover, nada de menús anidados
-- El modo debug (overlay de landmarks, ratios crudos) detrás de un flag
+- **El overlay de la malla de puntos sobre la foto queda siempre visible**,
+  no es "debug": da una sensación profesional y muestra la tecnología. Lo que
+  sí va detrás de un flag (`mostrarDebug` en `config.json`, ver sección 6) son
+  los paneles numéricos (yaw/pitch/roll/nitidez, calibración de nacimiento,
+  el grid crudo de R1-R6) — esos números no tienen valor para el barbero en
+  el día a día, la versión legible ya la da la frase explicativa de la forma
+  de cara. Decisión tomada mientras se probaba la Fase 5, adelantada respecto
+  del pulido general de la Fase 7 porque si no cada prueba con el barbero
+  arranca con ruido visual que no le sirve.
 
 ---
 
