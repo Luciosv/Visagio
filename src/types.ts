@@ -357,6 +357,70 @@ export interface CutRecommendation {
   readonly caminoEnVariosCortes: boolean
 }
 
+// ---------------------------------------------------------------------------
+// Fase 6a — ficha de cliente (sección 5 de CLAUDE.md). Persistida en
+// IndexedDB (`src/data/db.ts`), esquema versionado desde el día uno (sección
+// 6, regla 4). El análisis morfológico se hace una sola vez por cliente; el
+// historial es lo que crece en cada visita.
+// ---------------------------------------------------------------------------
+
+/**
+ * Morfología congelada de la consulta en la que se creó la ficha (sección 5:
+ * "forma, ratios, flags"). `formaSugerida` es el top-1 CRUDO de
+ * `classifyFaceShape`, tal cual salió del algoritmo, nunca lo que el barbero
+ * terminó eligiendo — para eso está `formaCorregida`. Mismo criterio que
+ * `formaSugerida`/`formaCorregida` del JSON de telemetría de la sección 2.3:
+ * `formaCorregida` es `null` si el barbero no tocó el selector (la sugerencia
+ * quedó tal cual).
+ */
+export interface MorfologiaCliente {
+  readonly formaSugerida: FaceShapeScore
+  readonly formaCorregida: FaceShape | null
+  readonly ratios: FaceRatios
+  readonly flags: readonly ClientFlag[]
+}
+
+/**
+ * Una visita en el historial de la ficha (sección 5: "fecha, corte hecho,
+ * spec usada, nota corta"). Se agrega una entrada por cada "Este hice"
+ * (sección 10) — la primera al crear la ficha, las siguientes cuando el
+ * barbero repita o ajuste en una visita futura (Fase 6b, todavía sin UI de
+ * "cliente que vuelve").
+ */
+export interface HistorialEntry {
+  /** ISO 8601, mismo formato que `ts` en la telemetría de la sección 2.3. */
+  readonly fecha: string
+  readonly corteId: string
+  readonly corteNombre: string
+  readonly spec: CutSpec
+  readonly nota?: string
+}
+
+/**
+ * Ficha de cliente completa (sección 5). `alias` es lo que el barbero elige
+ * para reconocerlo ("no hace falta nombre completo"). `id` es un UUID propio
+ * de la ficha, no ligado a ningún identificador personal.
+ */
+export interface ClienteFicha {
+  readonly id: string
+  readonly alias: string
+  /** ISO 8601. */
+  readonly creadoEn: string
+  /** ISO 8601, se actualiza en cada `agregarHistorial`. */
+  readonly actualizadoEn: string
+  readonly morfologia: MorfologiaCliente
+  readonly historial: readonly HistorialEntry[]
+  /**
+   * Foto de referencia del último corte (sección 5): "opcional y con
+   * consentimiento". PENDIENTE DE UI a propósito (Fase 6a, ver reporte): el
+   * tipo queda listo para que Fase 6b (o quien construya la carga de fotos)
+   * lo use, pero ningún flujo de esta fase escribe este campo. Cuando se
+   * construya esa UI, tiene que ir detrás de un checkbox de consentimiento
+   * explícito antes de guardar nada (secciones 5 y 14), nunca automática.
+   */
+  readonly fotoReferencia?: Blob
+}
+
 /**
  * Feature flags de `public/data/config.json` (sección 6 de CLAUDE.md: "un
  * `config.json` chico al lado de `cuts.json` con banderas booleanas. Permite
