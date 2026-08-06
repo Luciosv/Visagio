@@ -116,3 +116,42 @@ export interface FaceRatios {
   readonly r5: number
   readonly r6: FacialThirds
 }
+
+/**
+ * Las siete formas de cara clásicas del visagismo (7.6 y 12.2 de CLAUDE.md:
+ * "distintas escuelas usan 4, 5, 6, 7 o 9 categorías. Se eligen 7 y se
+ * documenta"). Identificadores sin tilde a propósito (uso como clave de
+ * mapas/objetos); la tilde va solo en las etiquetas de UI.
+ */
+export const FACE_SHAPES = [
+  'ovalada',
+  'redonda',
+  'cuadrada',
+  'alargada',
+  'corazon',
+  'diamante',
+  'triangular',
+] as const
+
+export type FaceShape = (typeof FACE_SHAPES)[number]
+
+/** Puntaje difuso de una forma puntual, ya normalizado como fracción del total (7.6: "top-2 normalizado"). */
+export interface FaceShapeScore {
+  readonly shape: FaceShape
+  /** Puntaje crudo de la regla difusa, antes de normalizar. Sirve para debug. */
+  readonly rawScore: number
+  /** `rawScore` como fracción del total de las 7 formas. Suma no siempre 1 entre las dos primeras: es fracción del total de las 7, no una renormalización entre las top-2 (de ahí que el ejemplo de 7.6 dé "61% / 34%", que suman 95%, no 100%). */
+  readonly confidence: number
+}
+
+/**
+ * Resultado completo de `classifyFaceShape`: las 7 formas puntuadas y
+ * ordenadas de mayor a menor confianza, más accesos directos a las top-2 que
+ * es lo único que se muestra en pantalla (sección 3 y 12: nunca una sola
+ * etiqueta con seguridad falsa).
+ */
+export interface FaceShapeClassification {
+  readonly scores: readonly FaceShapeScore[]
+  readonly top1: FaceShapeScore
+  readonly top2: FaceShapeScore
+}

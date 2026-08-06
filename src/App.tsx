@@ -1,13 +1,17 @@
-import { useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from 'react'
+import { Fragment, useRef, useState, type ChangeEvent, type PointerEvent as ReactPointerEvent } from 'react'
 import type {
   FaceRatios,
+  FaceShape,
+  FaceShapeClassification,
   FacialTransformationMatrix,
   LandmarkPoint,
   Point2D,
   PoseAngles,
   QualityResult,
 } from './types'
+import { FACE_SHAPES } from './types'
 import { getFaceLandmarker } from './vision/faceLandmarker'
+import { classifyFaceShape, explainFaceShape, FACE_SHAPE_LABELS } from './vision/faceShape'
 import {
   drawResized,
   extractGrayscaleRegion,
@@ -62,6 +66,17 @@ function App() {
   } | null>(null)
   const [ratios, setRatios] = useState<FaceRatios | null>(null)
 
+  // Clasificación de forma de cara (Fase 3, 7.6). `faceShapeSuggested` es el
+  // top-1 del algoritmo, tal cual sale de `classifyFaceShape`, y nunca se
+  // pisa: es la base para saber si el barbero corrigió o no (mismo patrón
+  // que `hairlineSuggested`/`hairlineCorrected` de arriba). `faceShapeCorrected`
+  // es la forma que queda mostrada, editable con el selector de las 7 formas.
+  const [faceShapeClassification, setFaceShapeClassification] = useState<FaceShapeClassification | null>(
+    null,
+  )
+  const [faceShapeSuggested, setFaceShapeSuggested] = useState<FaceShape | null>(null)
+  const [faceShapeCorrected, setFaceShapeCorrected] = useState<FaceShape | null>(null)
+
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -85,6 +100,9 @@ function App() {
     setHairlineCorrected(null)
     setMetricsSource(null)
     setRatios(null)
+    setFaceShapeClassification(null)
+    setFaceShapeSuggested(null)
+    setFaceShapeCorrected(null)
 
     try {
       const image = await loadImageFromFile(file)
@@ -189,7 +207,17 @@ function App() {
       imageHeight: metricsSource.imageHeight,
     })
     setRatios(computed)
+
+    const classification = classifyFaceShape(computed)
+    setFaceShapeClassification(classification)
+    setFaceShapeSuggested(classification.top1.shape)
+    setFaceShapeCorrected(classification.top1.shape)
+
     setStage('listo')
+  }
+
+  function handleFaceShapeOverride(shape: FaceShape) {
+    setFaceShapeCorrected(shape)
   }
 
   function onFileInputChange(event: ChangeEvent<HTMLInputElement>) {
@@ -207,7 +235,7 @@ function App() {
       <h1 className="text-3xl font-semibold tracking-tight">Visagio</h1>
       <p className="mt-1 text-sm text-neutral-400">Asistente de visagismo para barbería</p>
       <p className="mt-1 text-xs font-medium uppercase tracking-wide text-amber-400">
-        Fase 2 — métricas (ajuste de nacimiento + ratios)
+        Fase 3 — forma de cara (ratios + clasificación difusa + override)
       </p>
 
       <input
@@ -363,6 +391,84 @@ function App() {
               <dd>{(ratios.r6.menton * 100).toFixed(0)}%</dd>
             </div>
           </dl>
+        </div>
+      )}
+
+      {ratios && faceShapeClassification && faceShapeCorrected && (
+        <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
+          <p className="mb-1 font-semibold text-neutral-100">Forma de cara (sugerencia)</p>
+          {/* Nunca una etiqueta sola con seguridad falsa (secciones 3 y 12):
+              siempre se muestran las dos formas con más puntaje y su % de
+              confianza, nunca solo la primera. */}
+          <div className="mt-2 flex items-baseline gap-2">
+            <span className="text-lg font-semibold text-lime-400">
+              {FACE_SHAPE_LABELS[faceShapeClassification.top1.shape]}{' '}
+              {Math.round(faceShapeClassification.top1.confidence * 100)}%
+            </span>
+            <span className="text-sm text-neutral-500">
+              / {FACE_SHAPE_LABELS[faceShapeClassification.top2.shape]}{' '}
+              {Math.round(faceShapeClassification.top2.confidence * 100)}%
+            </span>
+          </div>
+          <p className="mt-2 text-xs text-neutral-400">
+            {explainFaceShape(faceShapeClassification, ratios)}
+          </p>
+
+          <p className="mb-2 mt-4 text-xs font-semibold uppercase tracking-wide text-neutral-500">
+            ¿No es esa la forma? Tocá la que le pinta más
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {FACE_SHAPES.map((shape) => {
+              const selected = faceShapeCorrected === shape
+              return (
+                <button
+                  key={shape}
+                  type="button"
+                  onClick={() => handleFaceShapeOverride(shape)}
+                  aria-pressed={selected}
+                  className={
+                    'min-h-14 rounded-xl border px-4 text-sm font-semibold transition active:scale-[0.98] ' +
+                    (selected
+                      ? 'border-lime-400 bg-lime-400 text-neutral-950'
+                      : 'border-neutral-700 bg-neutral-800 text-neutral-200')
+                  }
+                >
+                  {FACE_SHAPE_LABELS[shape]}
+                </button>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      {faceShapeClassification && faceShapeSuggested && faceShapeCorrected && (
+        <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-xs text-neutral-300">
+          <p className="mb-2 font-semibold text-neutral-100">Forma de cara (debug)</p>
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
+            <dt className="text-neutral-500">Sugerida (algoritmo)</dt>
+            <dd>{FACE_SHAPE_LABELS[faceShapeSuggested]}</dd>
+            <dt className="text-neutral-500">Corregida por el barbero</dt>
+            <dd>
+              {FACE_SHAPE_LABELS[faceShapeCorrected]}
+              {faceShapeCorrected !== faceShapeSuggested && ' (corregida)'}
+            </dd>
+          </dl>
+          <p className="mb-1 mt-3 text-neutral-500">Puntaje crudo de las 7 formas</p>
+          <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
+            {faceShapeClassification.scores.map((score) => (
+              <Fragment key={score.shape}>
+                <dt className="text-neutral-500">{FACE_SHAPE_LABELS[score.shape]}</dt>
+                <dd>
+                  {(score.confidence * 100).toFixed(0)}% (raw {score.rawScore.toFixed(2)})
+                </dd>
+              </Fragment>
+            ))}
+          </dl>
+          <p className="mt-2 text-neutral-500">
+            Igual que con el nacimiento del pelo: si el barbero corrige acá, es
+            oro puro para calibrar (2.3), pero todavía no se envía ni persiste
+            (eso es Fase 7).
+          </p>
         </div>
       )}
 
