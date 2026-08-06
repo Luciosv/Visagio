@@ -3,16 +3,17 @@
 // RESULTADOS → detalle → compartir/"este hice". Hasta la Fase 6a esto ERA
 // toda la app (`App.tsx` arrancaba directo acá, sin pantalla de inicio); se
 // movió a su propio componente para poder montarlo detrás de un botón
-// "Cliente nuevo" en `screens/HomeScreen.tsx`, sin tocarle la lógica interna
-// (encargo explícito de esta fase).
+// "Cliente nuevo" en `screens/HomeScreen.tsx`, sin tocarle la lógica interna.
 //
-// Lo nuevo de esta fase es el wiring de "Este hice" (antes deshabilitado,
-// texto "próximamente"): como todavía no existe el flujo de "cliente que
-// vuelve" (Fase 6b), acá SIEMPRE se trata como alta de cliente nuevo — se
-// pide un alias y se crea la `ClienteFicha` en IndexedDB con la morfología de
-// esta consulta y esta primera visita en el historial. La cola de feedback y
-// los chips de 👎 siguen sin implementar a propósito: son Fase 7, no esta,
-// aunque compartan el mismo botón de "Este hice" en el diseño.
+// Fase 6b: `ResultsScreen`/`CutDetailScreen`/`BarberForm` se extrajeron a
+// módulos propios (`screens/ResultsScreen.tsx`, `components/BarberForm.tsx`)
+// para que `screens/BuscarClienteScreen.tsx` (flujo de "cliente que vuelve")
+// los reuse sin duplicar la UI — este archivo ahora solo arma el pipeline de
+// visión + form y le pasa el resultado a `ResultsScreen` con
+// `guardarFichaTarget: { kind: 'nueva' }`, que es el único comportamiento de
+// "Este hice" que le corresponde a un cliente nuevo (pide alias y crea la
+// `ClienteFicha`). La cola de feedback y los chips de 👎 siguen sin
+// implementar a propósito: son Fase 7, no esta.
 
 import {
   Fragment,
@@ -20,31 +21,26 @@ import {
   useRef,
   useState,
   type ChangeEvent,
-  type FormEvent,
   type PointerEvent as ReactPointerEvent,
 } from 'react'
 import type {
-  AppConfig,
   BarberInput,
   ClientFlag,
-  Cut,
   CutLength,
   CutRecommendation,
   FaceRatios,
   FaceShape,
-  FaceShapeClassification,
-  FaceShapeScore,
   FacialTransformationMatrix,
+  FaceShapeClassification,
   HairDensity,
   HairTexture,
   LandmarkPoint,
   LargoActualArriba,
-  MorfologiaCliente,
   Point2D,
   PoseAngles,
   QualityResult,
 } from '../types'
-import { CUT_LENGTHS, FACE_SHAPES, HAIR_DENSITIES, HAIR_TEXTURES, LARGO_ACTUAL_ARRIBA_VALUES } from '../types'
+import { FACE_SHAPES } from '../types'
 import { getFaceLandmarker } from '../vision/faceLandmarker'
 import { applyFaceShapeOverride, classifyFaceShape, explainFaceShape, FACE_SHAPE_LABELS } from '../vision/faceShape'
 import {
@@ -66,75 +62,17 @@ import { drawLandmarksOverlay } from '../vision/overlay'
 import { DEBUG_HIGHLIGHT_GROUPS, LANDMARK_HAIRLINE_APPROX } from '../vision/landmarkIndices'
 import { publishDebugSnapshot } from '../vision/debugHook'
 import { recommendCuts } from '../engine/recommend'
-import { explainRecommendation, HAIR_DENSITY_LABELS, HAIR_TEXTURE_LABELS } from '../engine/explain'
-import { LARGO_ACTUAL_ARRIBA_LABELS } from '../engine/largoActualArribaThresholds'
-import { buildShareCardContent } from '../engine/shareCard'
-import { renderShareCardPng, shareCardPng } from '../shareImage'
-import { crearFicha } from '../data/db'
-import { Chip, ChipGroupSection, VersionFooter } from '../components/ui'
+import { useCuts } from '../hooks/useCuts'
+import { useAppConfig } from '../hooks/useAppConfig'
+import { BarberForm } from '../components/BarberForm'
+import { VersionFooter } from '../components/ui'
+import { ResultsScreen, type ResultsContext } from './ResultsScreen'
 
 declare global {
   interface Window {
     /** Gancho de testing DEV-only, ver el `useEffect` que lo define dentro de `NuevoClienteScreen`. */
     __visagioInjectRatiosForTesting?: (ratios: FaceRatios) => void
   }
-}
-
-// Fase 5 — quinto tap del form (7.7 + el nuevo tap de largo actual, ver
-// `types.ts`): grupos de chips de implantación y restricciones. Se separan a
-// mano (no derivados de `CLIENT_FLAGS`) para no depender del orden en que
-// queden declarados los flags en `types.ts`.
-const IMPLANTATION_FLAGS: readonly ClientFlag[] = ['remolino_coronilla', 'entradas', 'nuca_dificil', 'coronilla_rala']
-const RESTRICTION_FLAGS: readonly ClientFlag[] = ['orejas_prominentes', 'cuello_corto', 'gorra_o_casco', 'trabajo_formal']
-
-/** Etiquetas cortas de chip para los flags (distintas de `CLIENT_FLAG_LABELS` de `explain.ts`, que están redactadas para insertarse en una frase, no para un botón). */
-const FLAG_CHIP_LABELS: Record<ClientFlag, string> = {
-  remolino_coronilla: 'Remolino en la coronilla',
-  entradas: 'Entradas',
-  nuca_dificil: 'Nuca difícil',
-  coronilla_rala: 'Coronilla rala',
-  orejas_prominentes: 'Orejas prominentes',
-  cuello_corto: 'Cuello corto',
-  gorra_o_casco: 'Usa gorra o casco',
-  trabajo_formal: 'Trabajo formal',
-}
-
-/** Cuarto tap (7.7.4): minutos que el cliente está dispuesto a peinarse. "5+" es el piso de un rango abierto (ver `BarberInput.minutosDeclarados`). */
-const MINUTOS_DECLARADOS_OPTIONS = [0, 2, 5] as const
-
-/** Etiquetas del toggle de longitud de la pantalla de resultados (sección 9). CUIDADO: esto es la longitud del ESTILO del corte (`Cut.longitud`), no el largo actual del pelo del cliente (`LargoActualArriba`) — son dos conceptos distintos. */
-const CUT_LENGTH_LABELS: Record<CutLength, string> = {
-  corto: 'Corto',
-  medio: 'Medio',
-  largo: 'Largo',
-}
-
-/** Cuántos cortes del ranking completo se muestran en la pantalla de resultados (sección 11: "top 3-5 con maniquí"). */
-const RESULTS_TOP_N = 5
-
-/** Default seguro mientras `config.json` todavía no cargó (o si falla): sin debug, que es lo que tiene que ver el barbero (sección 6). */
-const DEFAULT_CONFIG: AppConfig = { mostrarDebug: false, nombreBarberia: '' }
-
-/**
- * Todo lo que la pantalla de resultados necesita para mostrar las cards y
- * armar el porqué de cada una (`explain.ts` pide el desglose MÁS el
- * contexto: la clasificación de forma ya con la corrección del barbero
- * aplicada, los ratios y el form completo). También lleva la forma SUGERIDA
- * cruda (pre-override) y la que quedó corregida sin combinar: `explain.ts`
- * necesita la clasificación ya combinada (`faceShape`), pero guardar la
- * ficha de cliente (`MorfologiaCliente`, sección 5) necesita distinguir las
- * dos por separado — igual que `formaSugerida`/`formaCorregida` del JSON de
- * telemetría de la sección 2.3, `formaCorregida` tiene que poder ser `null`
- * si el barbero no tocó nada, algo que `faceShape` ya combinado no puede
- * expresar.
- */
-interface ResultsContext {
-  readonly recommendations: readonly CutRecommendation[]
-  readonly faceShape: FaceShapeClassification
-  readonly ratios: FaceRatios
-  readonly barberInput: BarberInput
-  readonly faceShapeSuggestedTop1: FaceShapeScore
-  readonly faceShapeCorrectedShape: FaceShape
 }
 
 // 'ajuste-nacimiento': la foto pasó el gate de calidad y se está esperando
@@ -200,18 +138,11 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
   const [minutosDeclarados, setMinutosDeclarados] = useState<number | null>(null)
   const [largoActualArriba, setLargoActualArriba] = useState<LargoActualArriba | null>(null)
 
-  // `cuts.seed.json` se pide con `fetch` en runtime, nunca se importa al
-  // bundle (sección 6: "los datos separados del código"). Se carga una sola
-  // vez al montar, así ya está listo para cuando el barbero termine el form.
-  const [cuts, setCuts] = useState<readonly Cut[] | null>(null)
-  const [cutsError, setCutsError] = useState<string | null>(null)
-
-  // `config.json` (sección 6: "feature flags"), mismo patrón de fetch en
-  // runtime que `cuts.seed.json` y por la misma razón: prender/apagar un
-  // panel sin redeploy. Arranca en el default seguro (sin debug) hasta que
-  // llegue la respuesta, para que un barbero real nunca vea el flash de un
-  // panel numérico mientras carga.
-  const [config, setConfig] = useState<AppConfig>(DEFAULT_CONFIG)
+  // `cuts.seed.json` y `config.json` (sección 6: "los datos separados del
+  // código"), ambos vía hooks compartidos con `BuscarClienteScreen.tsx` (Fase
+  // 6b): misma lógica de fetch en runtime, dos consumidores.
+  const { cuts, cutsError } = useCuts()
+  const config = useAppConfig()
 
   // Resultado de `recommendCuts` más el contexto que necesita `explain.ts`
   // para armar el porqué de cada card (sección 9). Se arma una sola vez al
@@ -223,52 +154,6 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
 
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    fetch('/data/cuts.seed.json')
-      .then((response) => {
-        if (!response.ok) throw new Error('No se pudo cargar la base de cortes.')
-        return response.json() as Promise<Cut[]>
-      })
-      .then((data) => {
-        if (!cancelled) setCuts(data)
-      })
-      .catch((error: unknown) => {
-        if (!cancelled) {
-          setCutsError(error instanceof Error ? error.message : 'No se pudo cargar la base de cortes.')
-        }
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
-
-  useEffect(() => {
-    let cancelled = false
-    // Conveniencia solo para desarrollo local: `?debug=1` en la URL fuerza
-    // `mostrarDebug: true` sin tener que editar `config.json` a mano. No
-    // reemplaza el flag (que sigue siendo la fuente de verdad para el
-    // barbero real), solo lo pisa localmente en el navegador de quien abrió
-    // la URL con el query param.
-    const forceDebug = new URLSearchParams(window.location.search).get('debug') === '1'
-    fetch('/data/config.json')
-      .then((response) => {
-        if (!response.ok) throw new Error('No se pudo cargar la configuración.')
-        return response.json() as Promise<AppConfig>
-      })
-      .then((data) => {
-        if (!cancelled) setConfig({ ...data, mostrarDebug: data.mostrarDebug || forceDebug })
-      })
-      .catch(() => {
-        // Si `config.json` no está o falla, se sigue con el default seguro
-        // (sin debug) — salvo que el query param de conveniencia lo pida.
-        if (!cancelled && forceDebug) setConfig({ ...DEFAULT_CONFIG, mostrarDebug: true })
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   // Gancho de testing, solo en DEV (mismo criterio que `debugHook.ts`, que ya
   // anticipa este uso exacto: "un script de Playwright que arma el fixture
@@ -506,6 +391,7 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
         onSelect={setSelectedRecommendation}
         onBack={handleBackFromResults}
         onExit={onExit}
+        guardarFichaTarget={{ kind: 'nueva' }}
       />
     )
   }
@@ -790,8 +676,8 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
           onLargoActualArriba={setLargoActualArriba}
           canSubmit={canShowResults}
           onSubmit={handleShowResults}
+          submitLabel={cuts === null && cutsError === null ? 'Cargando base de cortes…' : 'Ver recomendaciones'}
           cutsError={cutsError}
-          cutsLoading={cuts === null && cutsError === null}
         />
       )}
 
@@ -889,580 +775,3 @@ function clamp01(value: number): number {
   return Math.min(1, Math.max(0, value))
 }
 
-interface BarberFormProps {
-  readonly textura: HairTexture | null
-  readonly onTextura: (value: HairTexture) => void
-  readonly densidad: HairDensity | null
-  readonly onDensidad: (value: HairDensity) => void
-  readonly flags: readonly ClientFlag[]
-  readonly onToggleFlag: (flag: ClientFlag) => void
-  readonly minutosDeclarados: number | null
-  readonly onMinutosDeclarados: (value: number) => void
-  readonly largoActualArriba: LargoActualArriba | null
-  readonly onLargoActualArriba: (value: LargoActualArriba) => void
-  readonly canSubmit: boolean
-  readonly onSubmit: () => void
-  readonly cutsError: string | null
-  readonly cutsLoading: boolean
-}
-
-/**
- * Form del barbero, 5 taps (7.7 original de 4 taps + el quinto tap de largo
- * actual agregado en esta fase). Todo chips grandes, sin inputs de texto ni
- * formulario tradicional (7.7: "presentarlo como chips grandes,
- * seleccionables con el pulgar, no como formulario").
- */
-function BarberForm({
-  textura,
-  onTextura,
-  densidad,
-  onDensidad,
-  flags,
-  onToggleFlag,
-  minutosDeclarados,
-  onMinutosDeclarados,
-  largoActualArriba,
-  onLargoActualArriba,
-  canSubmit,
-  onSubmit,
-  cutsError,
-  cutsLoading,
-}: BarberFormProps) {
-  return (
-    <div className="mt-6 w-full max-w-sm border-t border-neutral-800 pt-6">
-      <h2 className="text-lg font-semibold text-neutral-100">Datos del pelo y del cliente</h2>
-      <p className="mt-1 text-xs text-neutral-500">
-        Tocá lo que corresponda en cada grupo. Sin formulario, todo con el pulgar.
-      </p>
-
-      <ChipGroupSection title="1. Textura">
-        {HAIR_TEXTURES.map((value) => (
-          <Chip
-            key={value}
-            label={HAIR_TEXTURE_LABELS[value]}
-            selected={textura === value}
-            onClick={() => onTextura(value)}
-            capitalize
-          />
-        ))}
-      </ChipGroupSection>
-
-      <ChipGroupSection title="2. Densidad">
-        {HAIR_DENSITIES.map((value) => (
-          <Chip
-            key={value}
-            label={HAIR_DENSITY_LABELS[value]}
-            selected={densidad === value}
-            onClick={() => onDensidad(value)}
-            capitalize
-          />
-        ))}
-      </ChipGroupSection>
-
-      <ChipGroupSection title="3. Implantación (opcional)">
-        {IMPLANTATION_FLAGS.map((flag) => (
-          <Chip key={flag} label={FLAG_CHIP_LABELS[flag]} selected={flags.includes(flag)} onClick={() => onToggleFlag(flag)} />
-        ))}
-      </ChipGroupSection>
-
-      <ChipGroupSection title="4a. Restricciones (opcional)">
-        {RESTRICTION_FLAGS.map((flag) => (
-          <Chip key={flag} label={FLAG_CHIP_LABELS[flag]} selected={flags.includes(flag)} onClick={() => onToggleFlag(flag)} />
-        ))}
-      </ChipGroupSection>
-
-      <ChipGroupSection title="4b. Minutos que se dedica a peinar">
-        {MINUTOS_DECLARADOS_OPTIONS.map((value) => (
-          <Chip
-            key={value}
-            label={value === 5 ? '5+' : String(value)}
-            selected={minutosDeclarados === value}
-            onClick={() => onMinutosDeclarados(value)}
-          />
-        ))}
-      </ChipGroupSection>
-
-      <ChipGroupSection title="5. Largo actual arriba">
-        {LARGO_ACTUAL_ARRIBA_VALUES.map((value) => (
-          <Chip
-            key={value}
-            label={LARGO_ACTUAL_ARRIBA_LABELS[value]}
-            selected={largoActualArriba === value}
-            onClick={() => onLargoActualArriba(value)}
-          />
-        ))}
-      </ChipGroupSection>
-
-      {cutsError && (
-        <div className="mt-4 rounded-xl border border-red-500 bg-red-950 px-4 py-3 text-sm text-red-200">{cutsError}</div>
-      )}
-
-      <button
-        type="button"
-        disabled={!canSubmit}
-        onClick={onSubmit}
-        className="mt-6 min-h-14 w-full rounded-xl bg-lime-400 px-6 text-lg font-semibold text-neutral-950 transition active:scale-[0.98] disabled:opacity-40"
-      >
-        {cutsLoading ? 'Cargando base de cortes…' : 'Ver recomendaciones'}
-      </button>
-    </div>
-  )
-}
-
-interface ResultsScreenProps {
-  readonly results: ResultsContext
-  readonly config: AppConfig
-  readonly lengthFilter: CutLength | 'todos'
-  readonly onLengthFilterChange: (filter: CutLength | 'todos') => void
-  readonly selected: CutRecommendation | null
-  readonly onSelect: (recommendation: CutRecommendation | null) => void
-  readonly onBack: () => void
-  readonly onExit: () => void
-}
-
-/**
- * Pantalla de RESULTADOS (sección 10). Reemplaza toda la pantalla de
- * análisis mientras está activa: es una pantalla propia del flujo, no un
- * panel más apilado abajo. El toggle de longitud filtra por `Cut.longitud`
- * (longitud del ESTILO), no por `LargoActualArriba` (largo actual del pelo
- * del cliente, tap 5 del form) — son dos conceptos con nombres parecidos a
- * propósito de no confundir.
- */
-function ResultsScreen({
-  results,
-  config,
-  lengthFilter,
-  onLengthFilterChange,
-  selected,
-  onSelect,
-  onBack,
-  onExit,
-}: ResultsScreenProps) {
-  if (selected) {
-    return (
-      <CutDetailScreen
-        recommendation={selected}
-        results={results}
-        config={config}
-        onBack={() => onSelect(null)}
-        onExit={onExit}
-      />
-    )
-  }
-
-  const filtered = results.recommendations.filter((r) => lengthFilter === 'todos' || r.cut.longitud === lengthFilter)
-  const top = filtered.slice(0, RESULTS_TOP_N)
-  const lengthOptions: readonly (CutLength | 'todos')[] = ['todos', ...CUT_LENGTHS]
-
-  return (
-    <div className="flex min-h-svh flex-col items-center bg-neutral-950 px-4 pb-20 pt-8 text-neutral-50">
-      <div className="flex w-full max-w-sm items-center justify-between">
-        <button type="button" onClick={onBack} className="min-h-14 px-2 text-sm font-semibold text-neutral-300">
-          ← Volver
-        </button>
-        <h1 className="text-xl font-semibold">Resultados</h1>
-        <span className="w-14" aria-hidden />
-      </div>
-
-      {/* Toggle de longitud EN la pantalla de resultados (sección 9: "el barbero quiere poder comparar corto contra largo delante del cliente"). */}
-      <div className="mt-4 flex w-full max-w-sm gap-2">
-        {lengthOptions.map((option) => {
-          const isSelected = lengthFilter === option
-          return (
-            <button
-              key={option}
-              type="button"
-              onClick={() => onLengthFilterChange(option)}
-              aria-pressed={isSelected}
-              className={
-                'min-h-14 flex-1 rounded-xl border px-2 text-sm font-semibold transition active:scale-[0.98] ' +
-                (isSelected
-                  ? 'border-lime-400 bg-lime-400 text-neutral-950'
-                  : 'border-neutral-700 bg-neutral-800 text-neutral-200')
-              }
-            >
-              {option === 'todos' ? 'Todos' : CUT_LENGTH_LABELS[option]}
-            </button>
-          )
-        })}
-      </div>
-
-      {top.length === 0 && (
-        <p className="mt-8 max-w-sm text-center text-sm text-neutral-400">
-          Ningún corte de esta longitud en el ranking. Probá con otro filtro.
-        </p>
-      )}
-
-      <div className="mt-4 flex w-full max-w-sm flex-col gap-3">
-        {top.map((recommendation) => (
-          <CutCard
-            key={recommendation.cut.id}
-            recommendation={recommendation}
-            faceShape={results.faceShape}
-            ratios={results.ratios}
-            barberInput={results.barberInput}
-            onOpen={() => onSelect(recommendation)}
-          />
-        ))}
-      </div>
-
-      <VersionFooter />
-    </div>
-  )
-}
-
-interface CutCardProps {
-  readonly recommendation: CutRecommendation
-  readonly faceShape: FaceShapeClassification
-  readonly ratios: FaceRatios
-  readonly barberInput: BarberInput
-  readonly onOpen: () => void
-}
-
-/** Card de un corte recomendado: nombre, maniquí, y la línea de "porqué" de `explain.ts` (sección 9: "sin explicación el barbero no lo puede usar delante del cliente"). */
-function CutCard({ recommendation, faceShape, ratios, barberInput, onOpen }: CutCardProps) {
-  const { cut, caminoEnVariosCortes } = recommendation
-  const why = explainRecommendation(recommendation, faceShape, ratios, barberInput)
-
-  return (
-    <button
-      type="button"
-      onClick={onOpen}
-      className="flex min-h-24 items-center gap-3 rounded-xl border border-neutral-800 bg-neutral-900 p-3 text-left transition active:scale-[0.98]"
-    >
-      <img
-        src={cut.imagenes.tresCuartos}
-        alt=""
-        className="h-16 w-16 flex-shrink-0 rounded-lg bg-neutral-800 object-contain"
-      />
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="font-semibold text-neutral-50">{cut.nombre}</span>
-          {!cut.verificado && (
-            <span className="rounded-full border border-amber-500 px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-amber-400">
-              Sin verificar
-            </span>
-          )}
-        </div>
-        <p className="mt-1 text-xs text-neutral-400">{why}</p>
-        {caminoEnVariosCortes && (
-          <p className="mt-1 text-xs font-medium text-sky-400">
-            Con el largo actual no todavía, pero es un buen camino en 2-3 cortes
-          </p>
-        )}
-      </div>
-    </button>
-  )
-}
-
-interface CutDetailScreenProps {
-  readonly recommendation: CutRecommendation
-  readonly results: ResultsContext
-  readonly config: AppConfig
-  readonly onBack: () => void
-  readonly onExit: () => void
-}
-
-/**
- * Estado del botón "Compartir al cliente" (sección 2.2). Vive acá, no en
- * `types.ts`: es estado transitorio de esta pantalla, no un tipo de dominio
- * (mismo criterio que `Stage`/`ResultsContext` más arriba en este archivo).
- *
- *  - `idle`: nada en curso.
- *  - `generando`: armando el PNG (carga de imagen + `canvas.toBlob`).
- *  - `fallback`: `canShare({ files })` no está disponible (típico en
- *    desktop) — se ofrece la descarga manual en su lugar.
- *  - `error`: algo falló armando el PNG (no un rechazo/cancelación del
- *    usuario en el share nativo, eso se trata como `idle`).
- */
-type ShareState =
-  | { readonly status: 'idle' }
-  | { readonly status: 'generando' }
-  | { readonly status: 'fallback'; readonly url: string }
-  | { readonly status: 'error'; readonly message: string }
-
-/**
- * Estado de "Este hice" → guardar en la ficha de cliente (Fase 6a). Como
- * todavía no existe el flujo de "cliente que vuelve" (Fase 6b), acá SIEMPRE
- * se crea una ficha nueva: se pide un alias (sección 5: "el barbero elige
- * cómo llamarlo, no hace falta nombre completo") y se guarda la morfología de
- * esta consulta más esta primera visita en el historial.
- */
-type GuardarFichaState =
-  | { readonly status: 'idle' }
-  | { readonly status: 'pidiendo-alias' }
-  | { readonly status: 'guardando' }
-  | { readonly status: 'guardado'; readonly alias: string }
-  | { readonly status: 'error'; readonly message: string }
-
-/**
- * Detalle de un corte (sección 10): spec, pasos, cuidados, mantenimiento,
- * "Compartir al cliente" (PNG + Web Share, sección 2.2) y ahora "Este hice"
- * (Fase 6a: crea la ficha de cliente). El 👎 con chips de motivo sigue
- * deshabilitado a propósito: es Fase 7 (cola de feedback), no esta, aunque
- * comparta la fila de botones con "Este hice".
- */
-function CutDetailScreen({ recommendation, results, config, onBack, onExit }: CutDetailScreenProps) {
-  const { cut, caminoEnVariosCortes } = recommendation
-  const [shareState, setShareState] = useState<ShareState>({ status: 'idle' })
-  const [guardarState, setGuardarState] = useState<GuardarFichaState>({ status: 'idle' })
-  const [aliasInput, setAliasInput] = useState('')
-
-  // Libera el blob URL del fallback anterior en cuanto se deja atrás ese
-  // estado (nuevo intento de compartir, o se desmonta la pantalla con el
-  // fallback todavía mostrado) para no dejar memoria colgada. Depende de
-  // `shareState` a propósito: la limpieza de CADA render corre con el valor
-  // de ESE render antes de pasar al siguiente, así que revoca justo la URL
-  // que está por quedar huérfana, no una capturada una sola vez al montar.
-  useEffect(() => {
-    return () => {
-      if (shareState.status === 'fallback') URL.revokeObjectURL(shareState.url)
-    }
-  }, [shareState])
-
-  async function handleShareClick() {
-    setShareState({ status: 'generando' })
-    try {
-      const content = buildShareCardContent(recommendation, config)
-      const blob = await renderShareCardPng(content)
-      // A partir de acá no hay más awaits que no sean el propio `share()`:
-      // la sección 2.2 pide dispararlo pegado al click, sin trabajo de por
-      // medio, para no perder la activación transitoria del usuario.
-      const result = await shareCardPng(blob)
-      if (result === 'compartido') {
-        setShareState({ status: 'idle' })
-      } else {
-        setShareState({ status: 'fallback', url: URL.createObjectURL(blob) })
-      }
-    } catch (error) {
-      // El barbero cerró el panel nativo de compartir: no es un error, es
-      // una cancelación normal, se vuelve a `idle` en silencio.
-      if (error instanceof DOMException && error.name === 'AbortError') {
-        setShareState({ status: 'idle' })
-        return
-      }
-      setShareState({
-        status: 'error',
-        message: 'No se pudo generar la imagen para compartir. Probá de nuevo.',
-      })
-    }
-  }
-
-  async function handleConfirmarAlias(event: FormEvent) {
-    event.preventDefault()
-    const alias = aliasInput.trim()
-    if (alias.length === 0) return
-
-    setGuardarState({ status: 'guardando' })
-    try {
-      // `formaCorregida` es `null` si el barbero no tocó el selector de
-      // forma (mismo criterio que la telemetría de la sección 2.3): se
-      // compara contra la forma SUGERIDA cruda, no contra la clasificación
-      // ya combinada por `applyFaceShapeOverride` (que si hubo corrección
-      // ya no distingue "corregida" de "sugerida", las mezcló para el
-      // motor).
-      const formaCorregida =
-        results.faceShapeCorrectedShape === results.faceShapeSuggestedTop1.shape
-          ? null
-          : results.faceShapeCorrectedShape
-
-      const morfologia: MorfologiaCliente = {
-        formaSugerida: results.faceShapeSuggestedTop1,
-        formaCorregida,
-        ratios: results.ratios,
-        flags: results.barberInput.flags,
-      }
-
-      await crearFicha({
-        alias,
-        morfologia,
-        primerHistorial: {
-          fecha: new Date().toISOString(),
-          corteId: cut.id,
-          corteNombre: cut.nombre,
-          spec: cut.spec,
-        },
-      })
-
-      setGuardarState({ status: 'guardado', alias })
-    } catch (error) {
-      setGuardarState({
-        status: 'error',
-        message: error instanceof Error ? error.message : 'No se pudo guardar la ficha. Probá de nuevo.',
-      })
-    }
-  }
-
-  return (
-    <div className="flex min-h-svh flex-col items-center bg-neutral-950 px-4 pb-20 pt-8 text-neutral-50">
-      <div className="flex w-full max-w-sm items-center">
-        <button type="button" onClick={onBack} className="min-h-14 px-2 text-sm font-semibold text-neutral-300">
-          ← Volver a resultados
-        </button>
-      </div>
-
-      <h1 className="mt-2 w-full max-w-sm text-2xl font-semibold">{cut.nombre}</h1>
-      {!cut.verificado && (
-        <p className="mt-1 w-full max-w-sm text-xs font-medium uppercase tracking-wide text-amber-400">
-          Dato sin verificar todavía — a confirmar con el barbero
-        </p>
-      )}
-      {caminoEnVariosCortes && (
-        <div className="mt-3 w-full max-w-sm rounded-xl border border-sky-500 bg-sky-950 px-4 py-3 text-sm text-sky-200">
-          Con el largo actual no todavía, pero es un buen camino en 2-3 cortes.
-        </div>
-      )}
-
-      <img
-        src={cut.imagenes.tresCuartos}
-        alt=""
-        className="mt-4 h-40 w-40 rounded-xl bg-neutral-900 object-contain"
-      />
-
-      <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
-        <p className="mb-2 font-semibold text-neutral-100">Spec técnica</p>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-3 gap-y-1">
-          <dt className="text-neutral-500">Costados</dt>
-          <dd>{cut.spec.costados}</dd>
-          <dt className="text-neutral-500">Arriba</dt>
-          <dd>{cut.spec.arriba}</dd>
-          <dt className="text-neutral-500">Nuca</dt>
-          <dd>{cut.spec.nuca}</dd>
-          <dt className="text-neutral-500">Contorno</dt>
-          <dd>{cut.spec.contorno}</dd>
-        </dl>
-      </div>
-
-      <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
-        <p className="mb-2 font-semibold text-neutral-100">Pasos</p>
-        <ol className="list-decimal space-y-1 pl-4">
-          {cut.pasos.map((paso) => (
-            <li key={paso}>{paso}</li>
-          ))}
-        </ol>
-      </div>
-
-      <div className="mt-4 w-full max-w-sm rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
-        <p className="mb-2 font-semibold text-neutral-100">Cuidados</p>
-        <ul className="list-disc space-y-1 pl-4">
-          {cut.cuidados.map((cuidado) => (
-            <li key={cuidado}>{cuidado}</li>
-          ))}
-        </ul>
-        <p className="mt-3 text-xs text-neutral-500">
-          Mantenimiento: cada {cut.mantenimientoSemanas} semanas. Dificultad {cut.dificultad}/5, ~
-          {cut.tiempoEjecucionMin} min de sillón.
-        </p>
-      </div>
-
-      {/* "Compartir al cliente" (PNG + Web Share, sección 2.2) y "Este hice"
-          (Fase 6a: guarda la ficha de cliente). El 👎 sigue deshabilitado:
-          es Fase 7 (cola de feedback), no esta. */}
-      <div className="mt-4 flex w-full max-w-sm flex-col gap-2">
-        <button
-          type="button"
-          onClick={handleShareClick}
-          disabled={shareState.status === 'generando'}
-          className="min-h-14 w-full rounded-xl bg-lime-400 px-6 text-base font-semibold text-neutral-950 transition active:scale-[0.98] disabled:opacity-60"
-        >
-          {shareState.status === 'generando' ? 'Armando la ficha…' : 'Compartir al cliente'}
-        </button>
-
-        {shareState.status === 'fallback' && (
-          <div className="rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3 text-sm text-neutral-200">
-            <p>Guardá la imagen y mandala por WhatsApp.</p>
-            <a
-              href={shareState.url}
-              download="corte.png"
-              className="mt-2 flex min-h-14 items-center justify-center rounded-xl border border-lime-400 px-4 text-sm font-semibold text-lime-400"
-            >
-              Descargar imagen
-            </a>
-          </div>
-        )}
-
-        {shareState.status === 'error' && (
-          <p className="rounded-xl border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-200">
-            {shareState.message}
-          </p>
-        )}
-
-        {guardarState.status === 'guardado' ? (
-          <div className="rounded-xl border border-lime-500 bg-lime-950 px-4 py-3 text-sm text-lime-200">
-            <p>Guardado en la ficha de {guardarState.alias}.</p>
-            <button
-              type="button"
-              onClick={onExit}
-              className="mt-2 flex min-h-14 w-full items-center justify-center rounded-xl border border-lime-400 px-4 text-sm font-semibold text-lime-400"
-            >
-              Volver a inicio
-            </button>
-          </div>
-        ) : guardarState.status === 'pidiendo-alias' || guardarState.status === 'guardando' ? (
-          <form
-            onSubmit={handleConfirmarAlias}
-            className="rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3"
-          >
-            <label htmlFor="alias-ficha" className="text-sm font-semibold text-neutral-100">
-              ¿Cómo le decís a este cliente?
-            </label>
-            <p className="mt-1 text-xs text-neutral-500">
-              Un alias o apodo alcanza, no hace falta el nombre completo.
-            </p>
-            <input
-              id="alias-ficha"
-              type="text"
-              autoFocus
-              value={aliasInput}
-              onChange={(event) => setAliasInput(event.target.value)}
-              placeholder="Ej: Juan (campera roja)"
-              className="mt-3 min-h-14 w-full rounded-xl border border-neutral-700 bg-neutral-950 px-4 text-base text-neutral-50 placeholder:text-neutral-600"
-            />
-            <div className="mt-3 flex gap-2">
-              <button
-                type="button"
-                onClick={() => setGuardarState({ status: 'idle' })}
-                disabled={guardarState.status === 'guardando'}
-                className="min-h-14 flex-1 rounded-xl border border-neutral-700 px-4 text-sm font-semibold text-neutral-300 disabled:opacity-50"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={guardarState.status === 'guardando' || aliasInput.trim().length === 0}
-                className="min-h-14 flex-1 rounded-xl bg-lime-400 px-4 text-sm font-semibold text-neutral-950 disabled:opacity-50"
-              >
-                {guardarState.status === 'guardando' ? 'Guardando…' : 'Guardar'}
-              </button>
-            </div>
-          </form>
-        ) : (
-          <div className="flex gap-2">
-            <button
-              type="button"
-              onClick={() => setGuardarState({ status: 'pidiendo-alias' })}
-              className="min-h-14 flex-1 rounded-xl bg-neutral-800 px-4 text-sm font-semibold text-neutral-100 transition active:scale-[0.98]"
-            >
-              Este hice
-            </button>
-            <button
-              type="button"
-              disabled
-              className="min-h-14 flex-1 rounded-xl bg-neutral-800 px-4 text-sm font-semibold text-neutral-500"
-            >
-              👎 (próximamente)
-            </button>
-          </div>
-        )}
-
-        {guardarState.status === 'error' && (
-          <p className="rounded-xl border border-red-800 bg-red-950 px-4 py-3 text-sm text-red-200">
-            {guardarState.message}
-          </p>
-        )}
-      </div>
-
-      <VersionFooter />
-    </div>
-  )
-}
