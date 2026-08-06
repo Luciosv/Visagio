@@ -12,7 +12,7 @@
 // (`db.test.ts`) corren contra `fake-indexeddb`, no contra un navegador real.
 
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb'
-import type { ClienteFicha, HistorialEntry, MorfologiaCliente } from '../types'
+import type { ClienteFicha, EventoFeedback, HistorialEntry, MorfologiaCliente } from '../types'
 
 const DB_NAME = 'visagio'
 
@@ -24,17 +24,34 @@ const DB_NAME = 'visagio'
  * adentro: eso le vuela la ficha de sus clientes (sección 6, regla 4).
  *
  * v1 (Fase 6a): store `fichas` con índice por `alias`.
+ * v2 (Fase 7): + store `eventosFeedback` (sección 2.3), AGREGADO al lado del
+ * de `fichas` — el `if (oldVersion < 1)` de abajo queda intacto, así que una
+ * base que ya venía en v1 con fichas cargadas las conserva sin tocarlas y
+ * solo gana el store nuevo vacío (sección 6, regla 4: "un cambio de esquema
+ * sin migración le borra los clientes, y ahí se termina la prueba").
  */
-const DB_VERSION = 1
+const DB_VERSION = 2
 
 const FICHAS_STORE = 'fichas'
 const ALIAS_INDEX = 'alias'
+const EVENTOS_FEEDBACK_STORE = 'eventosFeedback'
 
 interface VisagioDBSchema extends DBSchema {
   [FICHAS_STORE]: {
     key: string
     value: ClienteFicha
     indexes: { [ALIAS_INDEX]: string }
+  }
+  [EVENTOS_FEEDBACK_STORE]: {
+    /**
+     * Key autogenerada (no hay ningún campo natural único en `EventoFeedback`
+     * — a propósito, sección 2.3: son "números sueltos", no llevan id de
+     * cliente). Solo se insertan eventos, nunca se actualizan (mismo
+     * criterio que el backend previsto de v1.1, sección 2.3: "política RLS
+     * de solo INSERT"), así que alcanza con una key autoincremental interna.
+     */
+    key: number
+    value: EventoFeedback
   }
 }
 
@@ -52,16 +69,18 @@ function getDb(): Promise<IDBPDatabase<VisagioDBSchema>> {
           store.createIndex(ALIAS_INDEX, 'alias')
         }
 
+        // v2 (Fase 7): crea el store `eventosFeedback` de la cola de
+        // feedback (sección 2.3). Puramente ADITIVO: no toca el store
+        // `fichas` de la v1 para nada, así que una base existente con
+        // clientes cargados llega acá con sus fichas intactas y solo suma el
+        // store nuevo, vacío.
+        if (oldVersion < 2) {
+          db.createObjectStore(EVENTOS_FEEDBACK_STORE, { autoIncrement: true })
+        }
+
         // ACÁ ABAJO van los `if (oldVersion < N)` de futuras versiones del
         // esquema, en orden, cada uno migrando los registros que ya existen
-        // (nunca `clear()`/recrear un store con datos adentro). Ninguno
-        // todavía: esta es la v1, recién nace. Ejemplo de la forma que va a
-        // tener cuando aparezca la v2:
-        //
-        // if (oldVersion < 2) {
-        //   // agregar un índice nuevo, transformar registros existentes
-        //   // con un cursor, etc.
-        // }
+        // (nunca `clear()`/recrear un store con datos adentro).
       },
     })
   }
@@ -152,4 +171,35 @@ export async function contarFichas(): Promise<number> {
 export async function borrarTodasLasFichas(): Promise<void> {
   const db = await getDb()
   await db.clear(FICHAS_STORE)
+}
+
+// ---------------------------------------------------------------------------
+// Cola de feedback (Fase 7, sección 2.3 de CLAUDE.md, v2 del esquema de
+// arriba). El evento ya viene armado por `engine/feedback.ts` — este módulo
+// solo lo persiste, no arma nada: la validación de "nunca una foto, nunca un
+// alias" vive en la firma de `buildFeedbackEvento`, no acá.
+// ---------------------------------------------------------------------------
+
+/** Agrega un evento a la cola de feedback. Solo INSERT (`db.add`, no `put`): un evento nunca se actualiza, mismo criterio que el backend insert-only previsto para v1.1. */
+export async function registrarEventoFeedback(evento: EventoFeedback): Promise<void> {
+  const db = await getDb()
+  await db.add(EVENTOS_FEEDBACK_STORE, evento)
+}
+
+/** Todos los eventos de feedback guardados, para el botón "Exportar todo" de "Datos y privacidad" (sección 5). */
+export async function listarEventosFeedback(): Promise<EventoFeedback[]> {
+  const db = await getDb()
+  return db.getAll(EVENTOS_FEEDBACK_STORE)
+}
+
+/** Cantidad de eventos de feedback guardados, para la pantalla de "Datos y privacidad" (sección 5). */
+export async function contarEventosFeedback(): Promise<number> {
+  const db = await getDb()
+  return db.count(EVENTOS_FEEDBACK_STORE)
+}
+
+/** Borra TODOS los eventos de feedback. Para el botón "borrar todo" de "Datos y privacidad" (sección 5) — el llamador es responsable de pedir confirmación antes de invocar esto. */
+export async function borrarTodosLosEventos(): Promise<void> {
+  const db = await getDb()
+  await db.clear(EVENTOS_FEEDBACK_STORE)
 }

@@ -361,6 +361,14 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
     const effectiveFaceShape = applyFaceShapeOverride(faceShapeClassification, faceShapeCorrected)
     const ranking = recommendCuts(cuts, effectiveFaceShape, barberInput)
 
+    // Delta de calibración del ajuste de nacimiento (7.4 y 2.3), mismo cálculo
+    // que ya se mostraba en el panel de debug de más abajo. `hairlineSuggested`
+    // y `hairlineCorrected` siguen en memoria en este punto (no se resetean
+    // hasta el próximo `handleFile`), así que están garantizados no-null acá:
+    // el `null` solo se usa como resguardo defensivo de tipos.
+    const ajusteLineaNacimiento =
+      hairlineSuggested && hairlineCorrected ? hairlineCorrected.y - hairlineSuggested.y : null
+
     setResults({
       recommendations: ranking,
       faceShape: effectiveFaceShape,
@@ -368,6 +376,7 @@ export function NuevoClienteScreen({ onExit }: NuevoClienteScreenProps) {
       barberInput,
       faceShapeSuggestedTop1: faceShapeClassification.top1,
       faceShapeCorrectedShape: faceShapeCorrected,
+      ajusteLineaNacimiento,
     })
     setLengthFilter('todos')
     setSelectedRecommendation(null)

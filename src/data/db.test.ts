@@ -11,16 +11,21 @@
 
 import 'fake-indexeddb/auto'
 import { IDBFactory } from 'fake-indexeddb'
+import { openDB } from 'idb'
 import { beforeEach, describe, expect, it } from 'vitest'
-import type { HistorialEntry, MorfologiaCliente } from '../types'
+import type { EventoFeedback, HistorialEntry, MorfologiaCliente } from '../types'
 import {
   __resetDbConnectionForTests,
   agregarHistorial,
   borrarTodasLasFichas,
+  borrarTodosLosEventos,
+  contarEventosFeedback,
   contarFichas,
   crearFicha,
+  listarEventosFeedback,
   listarFichas,
   obtenerFicha,
+  registrarEventoFeedback,
 } from './db'
 
 beforeEach(() => {
@@ -43,6 +48,23 @@ function buildHistorial(overrides: Partial<HistorialEntry> = {}): HistorialEntry
     corteId: 'taper-bajo',
     corteNombre: 'Taper bajo',
     spec: { costados: 'degradado a #2', arriba: '4-6 cm', nuca: 'degradado bajo', contorno: 'difuminado' },
+    ...overrides,
+  }
+}
+
+function buildEvento(overrides: Partial<EventoFeedback> = {}): EventoFeedback {
+  return {
+    ts: '2026-08-03T14:22:00.000Z',
+    sesion: 'uuid-sesion',
+    ratios: { r1: 1.62, r2: 0.88, r3: 0.94, r4: 118, r5: 0.33, r6: { frente: 0.34, nariz: 0.33, menton: 0.33 } },
+    formaSugerida: ['alargada', 0.61],
+    formaCorregida: null,
+    ajusteLineaNacimiento: 0.07,
+    form: { textura: 'ondulado', densidad: 'medio', flags: ['remolino_coronilla'] },
+    ranking: ['french-crop', 'low-fade-texturizado', 'taper-bajo'],
+    elegido: 'taper-bajo',
+    descartados: [{ id: 'french-crop', motivo: 'no_le_gusta_al_cliente' }],
+    segundosEnPantalla: 34,
     ...overrides,
   }
 }
@@ -139,5 +161,84 @@ describe('borrarTodasLasFichas', () => {
 
     expect(await contarFichas()).toBe(0)
     expect(await listarFichas()).toEqual([])
+  })
+})
+
+describe('cola de feedback (Fase 7, sección 2.3)', () => {
+  it('registrarEventoFeedback guarda el evento tal cual, sin transformarlo', async () => {
+    const evento = buildEvento()
+    await registrarEventoFeedback(evento)
+
+    const eventos = await listarEventosFeedback()
+    expect(eventos).toEqual([evento])
+  })
+
+  it('contarEventosFeedback cuenta los eventos guardados', async () => {
+    expect(await contarEventosFeedback()).toBe(0)
+    await registrarEventoFeedback(buildEvento())
+    await registrarEventoFeedback(buildEvento({ elegido: 'french-crop' }))
+    expect(await contarEventosFeedback()).toBe(2)
+  })
+
+  it('listarEventosFeedback devuelve un array vacío si no hay eventos', async () => {
+    expect(await listarEventosFeedback()).toEqual([])
+  })
+
+  it('borrarTodosLosEventos deja el store en cero sin tocar las fichas', async () => {
+    await crearFicha({ alias: 'Uno', morfologia: buildMorfologia(), primerHistorial: buildHistorial() })
+    await registrarEventoFeedback(buildEvento())
+    await registrarEventoFeedback(buildEvento({ elegido: 'french-crop' }))
+    expect(await contarEventosFeedback()).toBe(2)
+
+    await borrarTodosLosEventos()
+
+    expect(await contarEventosFeedback()).toBe(0)
+    expect(await listarEventosFeedback()).toEqual([])
+    // Borrar la cola de feedback no tiene que afectar las fichas de cliente:
+    // son dos stores independientes (sección 5: "las dos fuentes").
+    expect(await contarFichas()).toBe(1)
+  })
+})
+
+describe('migración de esquema v1 -> v2 (sección 6, regla 4)', () => {
+  it('una base que ya tenía fichas en v1 las conserva intactas después de abrir con DB_VERSION=2', async () => {
+    // Simula una base "vieja": se abre la conexión a mano en v1 (mismo
+    // `keyPath`/índice que crea `db.ts` para oldVersion < 1), se guarda una
+    // ficha, y se cierra. Después el código de producción (`crearFicha`,
+    // `contarFichas`, etc., vía `getDb()`) abre esa misma base con
+    // `DB_VERSION = 2` y dispara el upgrade v1 -> v2. La ficha de la v1 tiene
+    // que seguir ahí: un cambio de esquema sin migración correcta se la
+    // borraría, y esa es exactamente la regresión que esta prueba blinda.
+    const v1Db = await openDB('visagio', 1, {
+      upgrade(db) {
+        const store = db.createObjectStore('fichas', { keyPath: 'id' })
+        store.createIndex('alias', 'alias')
+      },
+    })
+    const fichaVieja = {
+      id: 'ficha-de-la-v1',
+      alias: 'Cliente de antes de la migración',
+      creadoEn: '2026-01-01T00:00:00.000Z',
+      actualizadoEn: '2026-01-01T00:00:00.000Z',
+      morfologia: buildMorfologia(),
+      historial: [buildHistorial()],
+    }
+    await v1Db.put('fichas', fichaVieja)
+    v1Db.close()
+
+    // `getDb()` (usado por todas las funciones exportadas de `db.ts`) todavía
+    // no se llamó en este test, así que la próxima llamada abre la base de
+    // cero con la `DB_VERSION` real del módulo (2) y corre el upgrade path
+    // completo, incluido el `if (oldVersion < 1)` que en este caso no debe
+    // hacer nada (el store `fichas` ya existe) y el `if (oldVersion < 2)`
+    // que agrega el store nuevo.
+    const fichas = await listarFichas()
+    expect(fichas).toEqual([fichaVieja])
+    expect(await contarFichas()).toBe(1)
+
+    // Y el store nuevo de la v2 quedó creado y utilizable.
+    expect(await contarEventosFeedback()).toBe(0)
+    await registrarEventoFeedback(buildEvento())
+    expect(await contarEventosFeedback()).toBe(1)
   })
 })

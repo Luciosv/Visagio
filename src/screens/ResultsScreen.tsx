@@ -16,19 +16,23 @@ import { useEffect, useState, type FormEvent } from 'react'
 import type {
   AppConfig,
   BarberInput,
+  CutDescartado,
   CutLength,
   CutRecommendation,
+  DescarteMotivo,
   FaceRatios,
   FaceShape,
   FaceShapeClassification,
   FaceShapeScore,
   MorfologiaCliente,
 } from '../types'
-import { CUT_LENGTHS } from '../types'
+import { CUT_LENGTHS, DESCARTE_MOTIVOS } from '../types'
 import { explainRecommendation } from '../engine/explain'
+import { buildFeedbackEvento } from '../engine/feedback'
 import { buildShareCardContent } from '../engine/shareCard'
 import { renderShareCardPng, shareCardPng } from '../shareImage'
-import { agregarHistorial, crearFicha } from '../data/db'
+import { agregarHistorial, crearFicha, registrarEventoFeedback } from '../data/db'
+import { getSesionId } from '../data/sesionId'
 import { VersionFooter } from '../components/ui'
 
 /**
@@ -48,6 +52,32 @@ export interface ResultsContext {
   readonly barberInput: BarberInput
   readonly faceShapeSuggestedTop1: FaceShapeScore
   readonly faceShapeCorrectedShape: FaceShape
+  /**
+   * Delta vertical normalizado entre el nacimiento sugerido (landmark 10) y
+   * el corregido por el barbero (7.4 de CLAUDE.md), dato de calibración de la
+   * sección 2.3. `null` cuando esta consulta no pasó por una foto nueva con
+   * ajuste de nacimiento — el camino "Buscar cliente → Ajustar"
+   * (`BuscarClienteScreen.tsx`) reusa los ratios YA GUARDADOS de una consulta
+   * anterior y no tiene ningún ajuste nuevo que reportar.
+   */
+  readonly ajusteLineaNacimiento: number | null
+}
+
+/**
+ * Estado de la sesión de feedback de ESTA pantalla de resultados (Fase 7,
+ * sección 2.3), vive en `ResultsScreen` — no en `CutDetailScreen`, que se
+ * desmonta y remonta cada vez que se abre/cierra el detalle de un corte
+ * distinto — para que los descartes se acumulen a lo largo de toda la
+ * consulta, no solo del último corte que se miró. `null` cuando no hay un
+ * `ResultsContext` real de por medio (camino "Repetir el último" de
+ * `BuscarClienteScreen.tsx`: no hay ranking ni form que reportar, así que no
+ * tiene sentido ofrecer 👎 ni armar un `EventoFeedback` ahí).
+ */
+export interface FeedbackSesionState {
+  readonly descartados: readonly CutDescartado[]
+  readonly onDescartar: (descarte: CutDescartado) => void
+  /** `Date.now()` de cuando se entró a esta pantalla de resultados, para calcular `segundosEnPantalla`. */
+  readonly entradaTimestamp: number
 }
 
 /**
@@ -105,6 +135,20 @@ export function ResultsScreen({
   onExit,
   guardarFichaTarget,
 }: ResultsScreenProps) {
+  // Sesión de feedback de ESTA pantalla de resultados (Fase 7, sección 2.3):
+  // arranca vacía/en el momento del mount, y sobrevive mientras el barbero
+  // abre y cierra el detalle de distintos cortes (`ResultsScreen` es el
+  // mismo componente montado durante toda la consulta; solo `CutDetailScreen`
+  // se desmonta al volver a la lista). Si el barbero vuelve al form y arma
+  // una consulta nueva, el `ResultsScreen` se remonta de cero y esto arranca
+  // de nuevo, que es lo correcto: es una consulta distinta.
+  const [descartados, setDescartados] = useState<readonly CutDescartado[]>([])
+  const [entradaTimestamp] = useState(() => Date.now())
+
+  function handleDescartar(descarte: CutDescartado) {
+    setDescartados((prev) => [...prev, descarte])
+  }
+
   if (selected) {
     return (
       <CutDetailScreen
@@ -114,6 +158,7 @@ export function ResultsScreen({
         onBack={() => onSelect(null)}
         onExit={onExit}
         guardarFichaTarget={guardarFichaTarget}
+        feedbackSesion={{ descartados, onDescartar: handleDescartar, entradaTimestamp }}
       />
     )
   }
@@ -238,6 +283,8 @@ interface CutDetailScreenProps {
   readonly onBack: () => void
   readonly onExit: () => void
   readonly guardarFichaTarget: GuardarFichaTarget
+  /** `null` en el camino "Repetir el último" (ver comentario de `FeedbackSesionState`): sin sesión de feedback, el 👎 queda deshabilitado y "Este hice" no arma ningún `EventoFeedback`. */
+  readonly feedbackSesion: FeedbackSesionState | null
 }
 
 /**
@@ -271,19 +318,31 @@ type GuardarFichaState =
   | { readonly status: 'guardado'; readonly alias: string }
   | { readonly status: 'error'; readonly message: string }
 
+/** Etiquetas de los chips de motivo de descarte (👎), EXACTOS de la sección 2.3 — nunca texto libre. */
+const DESCARTE_MOTIVO_LABELS: Record<DescarteMotivo, string> = {
+  no_le_gusta_al_cliente: 'No le gusta al cliente',
+  no_le_va_a_la_cara: 'No le va a la cara',
+  el_pelo_no_da: 'El pelo no da',
+  no_lo_mantiene: 'No lo mantiene',
+  mal_ejecutable: 'Mal ejecutable',
+}
+
 /**
  * Detalle de un corte (sección 10): spec, pasos, cuidados, mantenimiento,
- * "Compartir al cliente" (PNG + Web Share, sección 2.2) y "Este hice"
+ * "Compartir al cliente" (PNG + Web Share, sección 2.2), "Este hice"
  * (parametrizado con `guardarFichaTarget`, ver comentario de arriba del
- * archivo). El 👎 con chips de motivo sigue deshabilitado a propósito: es
- * Fase 7 (cola de feedback), no esta, aunque comparta la fila de botones con
- * "Este hice".
+ * archivo) y 👎 con chips de motivo (Fase 7, sección 2.3). Al confirmar
+ * "Este hice" con una sesión de feedback disponible (`feedbackSesion`), se
+ * arma y guarda un `EventoFeedback` completo ADEMÁS de la ficha de cliente —
+ * son dos escrituras independientes, un fallo en la segunda nunca bloquea la
+ * primera (ver `registrarFeedbackDeEsteHice` más abajo).
  */
-export function CutDetailScreen({ recommendation, results, config, onBack, onExit, guardarFichaTarget }: CutDetailScreenProps) {
+export function CutDetailScreen({ recommendation, results, config, onBack, onExit, guardarFichaTarget, feedbackSesion }: CutDetailScreenProps) {
   const { cut, caminoEnVariosCortes } = recommendation
   const [shareState, setShareState] = useState<ShareState>({ status: 'idle' })
   const [guardarState, setGuardarState] = useState<GuardarFichaState>({ status: 'idle' })
   const [aliasInput, setAliasInput] = useState('')
+  const [descarteAbierto, setDescarteAbierto] = useState(false)
 
   // Libera el blob URL del fallback anterior en cuanto se deja atrás ese
   // estado (nuevo intento de compartir, o se desmonta la pantalla con el
@@ -322,6 +381,44 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
     }
   }
 
+  /** `formaCorregida` es `null` si el barbero no tocó el selector (mismo criterio que la telemetría de la sección 2.3 y que `MorfologiaCliente`): se compara contra la forma SUGERIDA cruda, no contra la clasificación ya combinada por `applyFaceShapeOverride`. */
+  function formaCorregidaOrNull(ctx: ResultsContext): FaceShape | null {
+    return ctx.faceShapeCorrectedShape === ctx.faceShapeSuggestedTop1.shape ? null : ctx.faceShapeCorrectedShape
+  }
+
+  /**
+   * Arma y guarda el `EventoFeedback` de esta consulta (Fase 7, sección 2.3)
+   * al confirmar "Este hice". Necesita el `ResultsContext` completo (ratios,
+   * forma, form del barbero, ranking) MÁS la sesión de feedback de esta
+   * pantalla (descartes acumulados, timestamp de entrada) — si falta
+   * cualquiera de los dos (camino "Repetir el último") no hay nada que
+   * reportar y se sale en silencio. Un fallo acá NUNCA debe bloquear ni
+   * ensuciar el flujo principal de guardar la ficha del cliente: se ignora
+   * en silencio, es una señal de calibración, no el dato que le importa al
+   * barbero en la silla.
+   */
+  async function registrarFeedbackDeEsteHice() {
+    if (!results || !feedbackSesion) return
+    try {
+      const evento = buildFeedbackEvento({
+        sesion: getSesionId(),
+        ratios: results.ratios,
+        formaSugerida: results.faceShapeSuggestedTop1,
+        formaCorregida: formaCorregidaOrNull(results),
+        ajusteLineaNacimiento: results.ajusteLineaNacimiento,
+        barberInput: results.barberInput,
+        ranking: results.recommendations.map((r) => r.cut.id),
+        elegido: cut.id,
+        descartados: feedbackSesion.descartados,
+        segundosEnPantalla: Math.round((Date.now() - feedbackSesion.entradaTimestamp) / 1000),
+      })
+      await registrarEventoFeedback(evento)
+    } catch {
+      // Ver comentario de arriba: el feedback es secundario al guardado de
+      // la ficha, un fallo acá no se muestra ni interrumpe nada.
+    }
+  }
+
   /** Camino "cliente nuevo": pide alias y crea la ficha con la morfología de esta consulta. */
   async function handleConfirmarAlias(event: FormEvent) {
     event.preventDefault()
@@ -331,18 +428,9 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
 
     setGuardarState({ status: 'guardando' })
     try {
-      // `formaCorregida` es `null` si el barbero no tocó el selector de
-      // forma (mismo criterio que la telemetría de la sección 2.3): se
-      // compara contra la forma SUGERIDA cruda, no contra la clasificación
-      // ya combinada por `applyFaceShapeOverride`.
-      const formaCorregida =
-        results.faceShapeCorrectedShape === results.faceShapeSuggestedTop1.shape
-          ? null
-          : results.faceShapeCorrectedShape
-
       const morfologia: MorfologiaCliente = {
         formaSugerida: results.faceShapeSuggestedTop1,
-        formaCorregida,
+        formaCorregida: formaCorregidaOrNull(results),
         ratios: results.ratios,
         flags: results.barberInput.flags,
       }
@@ -357,6 +445,7 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
           spec: cut.spec,
         },
       })
+      await registrarFeedbackDeEsteHice()
 
       setGuardarState({ status: 'guardado', alias })
     } catch (error) {
@@ -382,6 +471,7 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
         setGuardarState({ status: 'error', message: 'No se encontró la ficha. Puede que se haya borrado.' })
         return
       }
+      await registrarFeedbackDeEsteHice()
       setGuardarState({ status: 'guardado', alias: guardarFichaTarget.alias })
     } catch (error) {
       setGuardarState({
@@ -397,6 +487,13 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
     } else {
       void handleGuardarExistente()
     }
+  }
+
+  /** Chip de motivo tocado: registra el descarte en la sesión de feedback y vuelve a la lista de resultados para que el barbero elija otro corte (criterio propio: no hay una respuesta única en la sección 2.3 para "qué pasa después de un 👎"). */
+  function handleDescartarConMotivo(motivo: DescarteMotivo) {
+    feedbackSesion?.onDescartar({ id: cut.id, motivo })
+    setDescarteAbierto(false)
+    onBack()
   }
 
   return (
@@ -538,6 +635,29 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
               </button>
             </div>
           </form>
+        ) : descarteAbierto ? (
+          <div className="rounded-xl border border-neutral-800 bg-neutral-900 px-4 py-3">
+            <p className="text-sm font-semibold text-neutral-100">¿Por qué se descarta este corte?</p>
+            <div className="mt-3 flex flex-col gap-2">
+              {DESCARTE_MOTIVOS.map((motivo) => (
+                <button
+                  key={motivo}
+                  type="button"
+                  onClick={() => handleDescartarConMotivo(motivo)}
+                  className="min-h-14 rounded-xl border border-neutral-700 bg-neutral-800 px-4 text-left text-sm font-semibold text-neutral-100 transition active:scale-[0.98]"
+                >
+                  {DESCARTE_MOTIVO_LABELS[motivo]}
+                </button>
+              ))}
+              <button
+                type="button"
+                onClick={() => setDescarteAbierto(false)}
+                className="min-h-14 rounded-xl border border-neutral-700 px-4 text-sm font-semibold text-neutral-300"
+              >
+                Cancelar
+              </button>
+            </div>
+          </div>
         ) : (
           <div className="flex gap-2">
             <button
@@ -550,10 +670,12 @@ export function CutDetailScreen({ recommendation, results, config, onBack, onExi
             </button>
             <button
               type="button"
-              disabled
-              className="min-h-14 flex-1 rounded-xl bg-neutral-800 px-4 text-sm font-semibold text-neutral-500"
+              onClick={() => setDescarteAbierto(true)}
+              disabled={feedbackSesion === null}
+              title={feedbackSesion === null ? 'No disponible en "Repetir el último"' : undefined}
+              className="min-h-14 flex-1 rounded-xl bg-neutral-800 px-4 text-sm font-semibold text-neutral-100 transition active:scale-[0.98] disabled:opacity-40"
             >
-              👎 (próximamente)
+              👎
             </button>
           </div>
         )}

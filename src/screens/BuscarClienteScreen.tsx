@@ -194,6 +194,10 @@ export function BuscarClienteScreen({ onExit }: BuscarClienteScreenProps) {
       barberInput,
       faceShapeSuggestedTop1: morfologia.formaSugerida,
       faceShapeCorrectedShape: correctedShape,
+      // "Ajustar" reusa los ratios YA GUARDADOS de la ficha, sin pasar por
+      // una foto nueva ni por el handle de nacimiento: no hay ningún ajuste
+      // que reportar acá (ver comentario de `ResultsContext.ajusteLineaNacimiento`).
+      ajusteLineaNacimiento: null,
     }
     setFichaView({ kind: 'resultados', results, lengthFilter: 'todos', selected: null })
   }
@@ -226,6 +230,11 @@ export function BuscarClienteScreen({ onExit }: BuscarClienteScreenProps) {
         onBack={() => setFichaView({ kind: 'ficha' })}
         onExit={onExit}
         guardarFichaTarget={{ kind: 'existente', fichaId: selectedFicha.id, alias: selectedFicha.alias }}
+        // "Repetir el último" no pasa por el motor de recomendación (no hay
+        // `ResultsContext`, ver `results={null}` arriba): no hay ranking ni
+        // form que reportar, así que tampoco hay sesión de feedback acá (ver
+        // comentario de `FeedbackSesionState` en `ResultsScreen.tsx`).
+        feedbackSesion={null}
       />
     )
   }

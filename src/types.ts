@@ -421,6 +421,92 @@ export interface ClienteFicha {
   readonly fotoReferencia?: Blob
 }
 
+// ---------------------------------------------------------------------------
+// Fase 7 — cola de feedback (sección 2.3 de CLAUDE.md). Un evento por
+// consulta cerrada con "Este hice": la señal más valiosa para calibrar el
+// motor de recomendación sin pedirle nada extra al barbero. Se persiste en
+// IndexedDB (`src/data/db.ts`, store `eventosFeedback`, v2 del esquema) y lo
+// arma `engine/feedback.ts` (función pura, mismo patrón defensivo que
+// `buildShareCardContent` de `shareCard.ts`: la firma de esa función
+// literalmente no tiene parámetro por donde pueda colarse una foto, un
+// landmark crudo o el alias/nombre del cliente).
+// ---------------------------------------------------------------------------
+
+/**
+ * Motivos de descarte (👎) predefinidos de la sección 2.3: "chips de motivo
+ * predefinidos, nunca texto libre". Un pulgar abajo con motivo es un tap; un
+ * campo de texto libre es una feature que nadie usa.
+ */
+export const DESCARTE_MOTIVOS = [
+  'no_le_gusta_al_cliente',
+  'no_le_va_a_la_cara',
+  'el_pelo_no_da',
+  'no_lo_mantiene',
+  'mal_ejecutable',
+] as const
+export type DescarteMotivo = (typeof DESCARTE_MOTIVOS)[number]
+
+/** Un corte descartado durante la sesión de resultados, con el motivo elegido (sección 2.3: `"descartados": [{ "id": ..., "motivo": ... }]`). */
+export interface CutDescartado {
+  readonly id: string
+  readonly motivo: DescarteMotivo
+}
+
+/**
+ * Evento de feedback de una consulta cerrada, formato DEFINITIVO de la
+ * sección 2.3 desde el día uno ("el formato es el definitivo desde el día
+ * uno... al conectar el backend se sincroniza retroactivamente todo lo
+ * acumulado"). Nunca puede llevar foto, landmark crudo, ni nombre/alias del
+ * cliente — el único lugar que arma este objeto es `engine/feedback.ts`, con
+ * una firma que no acepta esos datos ni por accidente.
+ *
+ * Dos decisiones sobre la forma EXACTA del ejemplo de la sección 2.3:
+ *
+ *  - `ratios`: el ejemplo del doc solo muestra R1-R4 (es un recorte
+ *    ilustrativo, no una restricción). Acá se mandan las 6 razones completas
+ *    (R1-R6): más dato es mejor para calibrar después y no cuesta nada de
+ *    privacidad extra (son números sueltos, no reconstruyen una cara). Se
+ *    reutiliza el tipo `FaceRatios` tal cual —claves `r1`..`r6` en minúscula,
+ *    con el objeto `r6` de tercios adentro— en vez de renombrar a `R1`..`R6`
+ *    en mayúscula como en el JSON de ejemplo: el resto del código
+ *    (`metrics.ts`, `faceShape.ts`, `MorfologiaCliente`) ya usa esa
+ *    convención en minúscula, y bifurcar el casing acá solo para imitar el
+ *    ejemplo de la doc metería una inconsistencia interna sin ningún
+ *    beneficio real (el JSON de telemetría de 2.3 es sobre el VALOR que
+ *    viaja, no exige un casing de clave particular).
+ *  - `formaSugerida`: tupla `[forma, confianza]` tal cual el ejemplo
+ *    (`["alargada", 0.61]`), no el objeto `FaceShapeScore` completo que usa
+ *    `MorfologiaCliente` — acá alcanza con la forma exacta del ejemplo.
+ *
+ * `ajusteLineaNacimiento` es `number | null` (no siempre `number` como en el
+ * ejemplo): el ejemplo asume una consulta que pasó por una foto nueva con
+ * ajuste de nacimiento (flujo "Cliente nuevo"). En "Buscar cliente → Ajustar"
+ * (`BuscarClienteScreen.tsx`) se reusan los ratios YA GUARDADOS de una
+ * consulta anterior y no hay ningún ajuste de nacimiento nuevo que reportar:
+ * `null` en ese caso, nunca un número inventado.
+ */
+export interface EventoFeedback {
+  /** ISO 8601, igual formato que `ts` de la telemetría de la sección 2.3 y que `HistorialEntry.fecha`. */
+  readonly ts: string
+  /** UUID anónimo del dispositivo, generado una sola vez (`src/data/sesionId.ts`). No identifica a una persona. */
+  readonly sesion: string
+  readonly ratios: FaceRatios
+  readonly formaSugerida: readonly [FaceShape, number]
+  readonly formaCorregida: FaceShape | null
+  readonly ajusteLineaNacimiento: number | null
+  readonly form: {
+    readonly textura: HairTexture
+    readonly densidad: HairDensity
+    readonly flags: readonly ClientFlag[]
+  }
+  /** Ids de `Cut`, en el orden completo del ranking que calculó `recommendCuts` (mejor primero) — no solo los que se llegaron a mostrar en pantalla. */
+  readonly ranking: readonly string[]
+  /** Id del `Cut` confirmado con "Este hice". */
+  readonly elegido: string
+  readonly descartados: readonly CutDescartado[]
+  readonly segundosEnPantalla: number
+}
+
 /**
  * Feature flags de `public/data/config.json` (sección 6 de CLAUDE.md: "un
  * `config.json` chico al lado de `cuts.json` con banderas booleanas. Permite
