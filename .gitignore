@@ -32,3 +32,12 @@ Thumbs.db
 # WASM del runtime de MediaPipe: se copia desde node_modules vía postinstall
 # (scripts/copy-mediapipe-wasm.mjs), no hace falta versionarlo.
 public/models/wasm/
+
+# Herramientas de Claude Code (skills instalados, config local): no son código
+# del proyecto, se reinstalan a partir de skills-lock.json.
+.agents/
+.claude/
+
+# Originales sin optimizar de los maniquíes: la app sólo usa los .webp
+# equivalentes en este mismo directorio (ver sección 15 de CLAUDE.md).
+public/cuts/*.png
